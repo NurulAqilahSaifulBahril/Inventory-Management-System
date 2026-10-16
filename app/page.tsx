@@ -235,6 +235,7 @@ type DeliveryRun = {
   jobIds: string[];
   weekLabel?: string;
   order?: number;
+  isWarehouseTransfer?: boolean;
 };
 
 // The warehouses a delivery run can depart from, kept as their own list below

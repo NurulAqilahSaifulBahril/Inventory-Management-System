@@ -26,18 +26,13 @@
 
 .lock {
   max-width: 420px;
-  height: 100vh;
+  min-height: 100vh;
+  height: auto;
   margin: 0 auto;
-  padding: 28px 18px 20px;
+  padding: 28px 18px 40px;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
-  scrollbar-width: none;
-}
-
-.lock::-webkit-scrollbar {
-  width: 0;
-  height: 0;
+  overflow: visible;
 }
 
 .srOnly {
@@ -53,19 +48,9 @@
 }
 
 .shade {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  scrollbar-width: none;
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-  padding-bottom: 8px;
-}
-
-.shade::-webkit-scrollbar {
-  width: 0;
-  height: 0;
+  display: block;
+  flex: none;
+  overflow: visible;
 }
 
 .noticeList {
@@ -74,8 +59,7 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 5px;
-  min-height: 100%;
+  gap: 6px;
 }
 
 .noticeCard {
@@ -658,7 +642,8 @@ button.typeCard {
 /* ── Tab bar ─────────────────────────────────────────────────────────── */
 
 .tabBar {
-  max-width: 420px;
+  max-width: 580px;
+  width: 100%;
   margin: 0 auto 16px;
   display: flex;
   gap: 4px;
@@ -676,10 +661,12 @@ button.typeCard {
   font: inherit;
   font-size: 13px;
   font-weight: 500;
-  padding: 7px 4px;
+  padding: 7px 10px;
   border-radius: 8px;
   cursor: pointer;
   transition: background 0.15s ease, color 0.15s ease;
+  white-space: nowrap;
+  text-align: center;
 }
 
 .tab:hover {
@@ -687,8 +674,9 @@ button.typeCard {
 }
 
 .tabActive {
-  background: var(--primary);
-  color: var(--bg);
+  background: #0f172a;
+  color: #ffffff;
+  font-weight: 600;
 }
 
 .tab:focus-visible {
@@ -1376,12 +1364,53 @@ button.typeCard {
   margin: 0 auto 14px;
   display: flex;
   align-items: center;
+  justify-content: space-between;
 }
 
 .brandLogo {
   display: block;
   width: auto;
   height: 20px;
+}
+
+.brandRight {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.brandUser {
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.brandSignOut {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.brandSignOut:hover {
+  background: var(--red-soft);
+  color: var(--red);
+  border-color: rgba(186, 26, 26, 0.3);
+}
+
+@media (max-width: 380px) {
+  .brandUser {
+    display: none;
+  }
 }
 
 /* The artwork is dark navy; flip it so it stays visible on the dark theme. */
@@ -1392,6 +1421,9 @@ button.typeCard {
 .desktop .brandBar {
   max-width: 1120px;
   margin-bottom: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .desktop .brandLogo {
@@ -1511,3 +1543,2553 @@ button.typeCard {
   padding: 0 2px;
   background: var(--bg);
 }
+
+/* ── Stock Movements & Balance Enhancements ────────────────────────── */
+
+.balanceHeaderRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.balanceWhSelector {
+  display: inline-flex;
+  background: var(--surface-soft);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 2px;
+  gap: 2px;
+}
+
+.balanceWhBtn {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.balanceWhActive {
+  background: var(--surface);
+  color: var(--ink);
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+
+.balanceCardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.balanceBadge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.balanceBadgePositive {
+  background: var(--green-soft);
+  color: var(--green);
+}
+
+.balanceBadgeShort {
+  background: var(--red-soft);
+  color: var(--red);
+}
+
+.balanceBarWrap {
+  margin-top: 10px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--surface-soft);
+  overflow: hidden;
+  display: flex;
+}
+
+.balanceBarCommitted {
+  background: var(--amber);
+  height: 100%;
+}
+
+.balanceBarFree {
+  background: var(--green);
+  height: 100%;
+}
+
+.balanceHint {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 8px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.onHandMain {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 4px 0 10px;
+}
+
+.onHandNumber {
+  font-size: 34px;
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.onHandLabel {
+  font-size: 13px;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.onHandSplit {
+  display: flex;
+  gap: 14px;
+  font-size: 12px;
+  color: var(--muted);
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+}
+
+.onHandSplit strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+/* ── Transactions Ledger ────────────────────────────────────────────── */
+
+.txSection {
+  margin-top: 28px;
+}
+
+.txSummaryRow {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.desktop .txSummaryRow {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.txKpiCard {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.txKpiLabel {
+  font-size: 11px;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.txKpiValue {
+  font-size: 20px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.txKpiIn {
+  color: var(--green);
+}
+
+.txKpiOut {
+  color: var(--red);
+}
+
+.txKpiSub {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.txKpiBreakdownGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--line);
+}
+
+.txKpiCatChip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 4px;
+  background: var(--surface-soft);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.txKpiCatChip:hover {
+  background: var(--surface);
+  border-color: var(--frost);
+  transform: translateY(-1px);
+}
+
+.txKpiCatChipActive {
+  background: rgba(28, 110, 140, 0.12) !important;
+  border-color: var(--frost) !important;
+}
+
+.txKpiCatName {
+  font-size: 10px;
+  color: var(--muted);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.txKpiCatValIn {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--green);
+  margin-top: 2px;
+}
+
+.txKpiCatValOut {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--red);
+  margin-top: 2px;
+}
+
+
+.txWeekBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--surface-soft);
+  color: var(--ink);
+  border: 1px solid var(--line);
+}
+
+.txWeekDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--green);
+}
+
+.txControls {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.desktop .txControls {
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.txFilterPills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.txPill {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--muted);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 5px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.txPill:hover {
+  background: var(--surface-soft);
+  color: var(--ink);
+}
+
+.txPillActive {
+  background: var(--primary);
+  color: var(--bg);
+  border-color: var(--primary);
+  font-weight: 600;
+}
+
+.txSearchInput {
+  height: 36px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+  padding: 0 12px;
+  min-width: 240px;
+}
+
+.txBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.txIn {
+  background: var(--green-soft);
+  color: var(--green);
+}
+
+.txOut {
+  background: var(--red-soft);
+  color: var(--red);
+}
+
+.txTransfer {
+  background: rgba(14, 165, 233, 0.12);
+  color: #0284c7;
+  border: 1px solid rgba(14, 165, 233, 0.3);
+}
+
+.txQtyIn {
+  color: var(--green);
+  font-weight: 600;
+}
+
+.txQtyOut {
+  color: var(--red);
+  font-weight: 600;
+}
+
+.txQtyTransfer {
+  color: #0284c7;
+  font-weight: 600;
+}
+
+.txRouteBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--surface-soft);
+  border: 1px solid var(--line);
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.txRouteArrow {
+  color: #0284c7;
+  font-weight: 700;
+}
+
+.txParty {
+  color: var(--muted);
+  font-size: 12px;
+  display: block;
+}
+
+.txStatusBadge {
+  display: inline-block;
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--surface-soft);
+  color: var(--muted);
+  border: 1px solid var(--line);
+}
+
+/* ── Status Buttons in Transactions Table ─────────────────────────── */
+
+.btnToVerify {
+  border: 1px solid var(--amber);
+  background: var(--amber-soft);
+  color: var(--amber);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 999px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.btnToVerify:hover {
+  background: var(--amber);
+  color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+}
+
+.btnInspected {
+  border: 1px solid var(--red);
+  background: var(--red-soft);
+  color: var(--red);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 999px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.btnInspected:hover {
+  background: var(--red);
+  color: #ffffff;
+}
+
+.btnActionDanger {
+  background: var(--red-soft);
+  color: var(--red);
+  border: 1px solid var(--red);
+  border-radius: 8px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 10px 18px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btnActionDanger:hover {
+  background: var(--red);
+  color: #ffffff;
+}
+
+.btnVerified {
+  border: 1px solid var(--green);
+  background: var(--green-soft);
+  color: var(--green);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 999px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.btnVerified:hover {
+  background: var(--green);
+  color: #ffffff;
+}
+
+/* ── Transaction Inspection Page ──────────────────────────────────── */
+
+.inspectPage {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.inspectTopBar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
+.inspectBackBtn {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 4px 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.inspectBackBtn:hover {
+  color: var(--ink);
+}
+
+.inspectHeroCard {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 16px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.inspectHeroTitle {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--ink);
+  margin: 0 0 4px;
+}
+
+.inspectHeroSub {
+  font-size: 13px;
+  color: var(--muted);
+  margin: 0;
+}
+
+.inspectGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+.desktop .inspectGrid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.inspectCard {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.inspectCardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--line);
+}
+
+.inspectCardTitle {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.inspectDataList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.inspectDataRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  font-size: 13px;
+}
+
+.inspectDataLabel {
+  color: var(--muted);
+  font-weight: 400;
+  flex: 0 0 auto;
+}
+
+.inspectDataValue {
+  color: var(--ink);
+  font-weight: 500;
+  text-align: right;
+  word-break: break-word;
+}
+
+.inspectQtyBig {
+  font-size: 24px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.inspectMatchNotice {
+  background: var(--green-soft);
+  color: var(--green);
+  border: 1px solid rgba(35, 122, 75, 0.2);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.inspectChecklistCard {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 18px;
+}
+
+.inspectChecklistTitle {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0 0 12px;
+}
+
+.inspectChecklist {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.inspectCheckItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.inspectCheckItem input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--green);
+  cursor: pointer;
+}
+
+.inspectFooterBar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 16px 0 24px;
+}
+
+.inspectActionGroup {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.btnActionPrimary {
+  background: var(--green);
+  color: #ffffff;
+  border: 0;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 10px 18px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btnActionPrimary:hover {
+  background: #1c643d;
+}
+
+.btnActionSecondary {
+  background: rgba(28, 110, 140, 0.12);
+  color: var(--frost);
+  border: 1px solid var(--frost);
+  border-radius: 8px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 10px 18px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btnActionSecondary:hover {
+  background: var(--frost);
+  color: #ffffff;
+}
+
+.btnActionGhost {
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font: inherit;
+  font-size: 13px;
+  padding: 10px 16px;
+  cursor: pointer;
+}
+
+.btnActionGhost:hover {
+  color: var(--red);
+  border-color: var(--red);
+}
+
+/* ── Stock In Barcode Scanner & SKU Verification Page ─────────────── */
+
+.deliveryEtaBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(46, 125, 50, 0.12);
+  color: #1b5e20;
+  border: 1px solid rgba(46, 125, 50, 0.3);
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+:global(:root[data-theme="dark"]) .deliveryEtaBadge {
+  background: rgba(129, 199, 132, 0.15);
+  color: #81c784;
+  border-color: rgba(129, 199, 132, 0.35);
+}
+
+.scannerCard {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.scannerHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.scannerTitle {
+  font-size: 15px;
+  font-weight: 700;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.scannerHelpText {
+  font-size: 12px;
+  color: var(--muted);
+  margin: 0;
+}
+
+.scannerInputRow {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.scannerInput {
+  flex: 1;
+  min-width: 240px;
+  height: 42px;
+  padding: 0 14px;
+  border: 2px solid var(--frost);
+  border-radius: 8px;
+  background: var(--surface-soft);
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  outline: none;
+  transition: all 0.15s ease;
+}
+
+.scannerInput:focus {
+  border-color: var(--green);
+  box-shadow: 0 0 0 3px rgba(35, 122, 75, 0.18);
+  background: var(--surface);
+}
+
+.scannerBtnScan {
+  background: var(--primary);
+  color: #ffffff;
+  border: 0;
+  border-radius: 8px;
+  padding: 0 18px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: background 0.15s ease;
+}
+
+.scannerBtnScan:hover {
+  background: #004d40;
+}
+
+.scannerBtnCamera {
+  background: var(--surface-soft);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0 14px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.scannerBtnCameraActive {
+  background: rgba(28, 110, 140, 0.15);
+  border-color: var(--frost);
+  color: var(--frost);
+}
+
+.cameraViewfinder {
+  background: #0f172a;
+  color: #38bdf8;
+  border-radius: 8px;
+  padding: 16px;
+  position: relative;
+  overflow: hidden;
+  text-align: center;
+  border: 1px solid rgba(56, 189, 248, 0.3);
+}
+
+.cameraScanLine {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #ef4444;
+  box-shadow: 0 0 8px #ef4444;
+  animation: scanMove 2s infinite ease-in-out;
+}
+
+@keyframes scanMove {
+  0% { top: 10%; }
+  50% { top: 90%; }
+  100% { top: 10%; }
+}
+
+
+.scanFeedback {
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.scanFeedbackSuccess {
+  background: var(--green-soft);
+  color: var(--green);
+  border: 1px solid rgba(35, 122, 75, 0.3);
+}
+
+.scanFeedbackWarning {
+  background: var(--amber-soft);
+  color: #b45309;
+  border: 1px solid rgba(217, 119, 6, 0.3);
+}
+
+.scanFeedbackError {
+  background: var(--red-soft);
+  color: var(--red);
+  border: 1px solid rgba(186, 26, 26, 0.3);
+}
+
+/* ── Item List with SKU ID ────────────────────────────────────────── */
+
+.skuTableCard {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.skuProgressHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.skuOverallStats {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.progressBarContainer {
+  height: 8px;
+  background: var(--surface-soft);
+  border-radius: 999px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+}
+
+.progressBarFill {
+  height: 100%;
+  background: var(--green);
+  transition: width 0.3s ease;
+}
+
+.progressBarFillWarning {
+  background: var(--amber);
+}
+
+.skuTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.skuTable th {
+  text-align: left;
+  padding: 8px 10px;
+  border-bottom: 2px solid var(--line);
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.skuTable td {
+  padding: 12px 10px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: middle;
+}
+
+.skuTable tr:last-child td {
+  border-bottom: none;
+}
+
+.skuBadge {
+  display: inline-block;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: var(--surface-soft);
+  color: var(--ink);
+  border: 1px solid var(--line);
+}
+
+.itemDesc {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.matchPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.matchPillPending {
+  background: var(--surface-soft);
+  color: var(--muted);
+  border: 1px solid var(--line);
+}
+
+.matchPillPartial {
+  background: var(--amber-soft);
+  color: #b45309;
+  border: 1px solid rgba(217, 119, 6, 0.3);
+}
+
+.matchPillComplete {
+  background: var(--green-soft);
+  color: var(--green);
+  border: 1px solid rgba(35, 122, 75, 0.3);
+}
+
+.scannedSerialsTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.serialTag {
+  font-family: ui-monospace, monospace;
+  font-size: 10px;
+  background: var(--surface-soft);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 1px 6px;
+}
+
+.btnVerifiedGlow {
+  background: var(--green) !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 12px rgba(35, 122, 75, 0.4);
+  animation: pulseButton 2s infinite;
+}
+
+@keyframes pulseButton {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.02); }
+  100% { transform: scale(1); }
+}
+
+.btnVerifiedLocked {
+  background: var(--surface-soft) !important;
+  color: var(--muted) !important;
+  border: 1px solid var(--line) !important;
+  cursor: not-allowed !important;
+}
+
+/* ── View Invoice Button & Modal ──────────────────────────────────── */
+
+.btnViewInvoice {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--surface);
+  color: var(--primary);
+  border: 1.5px solid var(--primary);
+  padding: 6px 14px;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.btnViewInvoice:hover {
+  background: var(--primary);
+  color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.12);
+}
+
+.invoiceBackdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(4px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  animation: invoiceFadeIn 0.2s ease-out;
+}
+
+@keyframes invoiceFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.invoiceModal {
+  background: #ffffff;
+  color: #1e293b;
+  width: 100%;
+  max-width: 680px;
+  max-height: 90vh;
+  overflow-y: auto;
+  border-radius: 14px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
+  display: flex;
+  flex-direction: column;
+  animation: invoiceSlideUp 0.25s ease-out;
+  border: 1px solid #cbd5e1;
+}
+
+@keyframes invoiceSlideUp {
+  from { opacity: 0; transform: translateY(12px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.invoiceTopBar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 22px;
+  border-bottom: 1px solid #e2e8f0;
+  background: #f8fafc;
+  border-top-left-radius: 14px;
+  border-top-right-radius: 14px;
+}
+
+.invoiceTopBarTitle {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.invoiceCloseBtn {
+  background: transparent;
+  border: 0;
+  color: #64748b;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+}
+
+.invoiceCloseBtn:hover {
+  color: #0f172a;
+}
+
+.invoicePaper {
+  padding: 24px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  font-size: 13px;
+}
+
+.invoiceSupplierRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding-bottom: 14px;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.invoiceSupplierTitle {
+  font-size: 18px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 4px;
+}
+
+.invoiceMetaGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  background: #f8fafc;
+  padding: 14px 16px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+.invoiceMetaItem {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.invoiceMetaLabel {
+  font-size: 11px;
+  color: #64748b;
+  text-transform: uppercase;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+
+.invoiceMetaValue {
+  font-size: 13px;
+  color: #0f172a;
+  font-weight: 600;
+}
+
+.invoiceTable {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 8px 0;
+}
+
+.invoiceTable th {
+  background: #f1f5f9;
+  color: #475569;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 10px 12px;
+  border-bottom: 1px solid #cbd5e1;
+  text-align: left;
+}
+
+.invoiceTable td {
+  padding: 12px;
+  border-bottom: 1px solid #e2e8f0;
+  color: #1e293b;
+}
+
+.invoiceTotals {
+  align-self: flex-end;
+  width: 260px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 8px;
+}
+
+.invoiceTotalRow {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  color: #64748b;
+}
+
+.invoiceTotalFinal {
+  font-size: 16px;
+  font-weight: 800;
+  color: #0f172a;
+  padding-top: 8px;
+  border-top: 2px solid #0f172a;
+}
+
+.invoiceFooterNote {
+  background: #f8fafc;
+  border-left: 3px solid #3b82f6;
+  padding: 10px 14px;
+  font-size: 12px;
+  color: #475569;
+  border-radius: 4px;
+}
+
+/* ── Physical Receiving Verification Issue Reporting ─────────────── */
+
+.issueReportingCard {
+  background: var(--surface);
+  border: 1.5px solid rgba(186, 26, 26, 0.4);
+  border-radius: 12px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.issueHeaderRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.issueTitle {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--red);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.issueItemBadge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: var(--red-soft);
+  color: var(--red);
+  border: 1px solid rgba(186, 26, 26, 0.3);
+}
+
+.issueReasonsList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 4px 0;
+}
+
+.issueRadioLabel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--ink);
+  cursor: pointer;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  transition: all 0.15s ease;
+}
+
+.issueRadioLabel:hover {
+  background: var(--surface-soft);
+}
+
+.issueRadioLabelActive {
+  background: var(--red-soft);
+  border-color: rgba(186, 26, 26, 0.3);
+  color: var(--red);
+  font-weight: 600;
+}
+
+.issueRadioLabel input[type="radio"] {
+  accent-color: var(--red);
+  cursor: pointer;
+  width: 15px;
+  height: 15px;
+}
+
+.issueNotesInput {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font: inherit;
+  font-size: 13px;
+  background: var(--surface-soft);
+  color: var(--ink);
+  outline: none;
+}
+
+.issueNotesInput:focus {
+  border-color: var(--red);
+  background: var(--surface);
+}
+
+.issueRemarkTag {
+  display: inline-block;
+  font-size: 11px;
+  color: var(--red);
+  background: var(--red-soft);
+  border: 1px solid rgba(186, 26, 26, 0.25);
+  border-radius: 4px;
+  padding: 2px 7px;
+  margin-top: 4px;
+  font-weight: 500;
+}
+
+.issueInvoiceStrip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+  background: var(--surface-soft);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 14px;
+}
+
+.issueInvoiceField {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.issueInvoiceLabel {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.issueInvoiceValue {
+  font-size: 13px;
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.issueCountToggle {
+  display: inline-flex;
+  gap: 6px;
+  background: var(--surface-soft);
+  padding: 3px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+}
+
+.issueCountBtn {
+  border: none;
+  background: transparent;
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--muted);
+  transition: all 0.15s ease;
+}
+
+.issueCountBtn:hover {
+  color: var(--ink);
+}
+
+.issueCountBtnActive {
+  background: var(--red);
+  color: #ffffff !important;
+  box-shadow: 0 1px 3px rgba(186, 26, 26, 0.3);
+}
+
+.issueMissingUnitsBox {
+  background: rgba(186, 26, 26, 0.04);
+  border: 1px dashed rgba(186, 26, 26, 0.35);
+  border-radius: 8px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.issueMissingUnitRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  background: var(--surface);
+  border: 1px solid rgba(186, 26, 26, 0.2);
+  border-radius: 6px;
+  padding: 8px 12px;
+}
+
+.issueUnitBadge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: var(--red-soft);
+  color: var(--red);
+  border: 1px solid rgba(186, 26, 26, 0.25);
+}
+
+/* ── Supplier Serial List Modal & Camera Feed ────────────────────── */
+
+.btnViewSerialList {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--surface);
+  color: #0284c7;
+  border: 1.5px solid #0284c7;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btnViewSerialList:hover {
+  background: #0284c7;
+  color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(2, 132, 199, 0.25);
+}
+
+.serialModal {
+  background: #ffffff;
+  color: #1e293b;
+  width: 100%;
+  max-width: 860px;
+  max-height: 90vh;
+  overflow-y: auto;
+  border-radius: 14px;
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.28);
+  display: flex;
+  flex-direction: column;
+  animation: invoiceSlideUp 0.25s ease-out;
+  border: 1px solid #cbd5e1;
+}
+
+.serialStatsBar {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  background: #f8fafc;
+  padding: 12px 16px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+}
+
+.serialStatBox {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.serialStatLabel {
+  font-size: 11px;
+  color: #64748b;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.serialStatVal {
+  font-size: 16px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.serialControlsRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.serialSearchInput {
+  flex: 1;
+  min-width: 220px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  font-size: 13px;
+  font-family: inherit;
+  background: #ffffff;
+  color: #0f172a;
+}
+
+.serialFilterPills {
+  display: flex;
+  gap: 6px;
+}
+
+.serialFilterPill {
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid #cbd5e1;
+  background: #f8fafc;
+  color: #475569;
+  transition: all 0.15s ease;
+}
+
+.serialFilterPillActive {
+  background: #0284c7;
+  color: #ffffff;
+  border-color: #0284c7;
+}
+
+.palletCard {
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 12px;
+  background: #ffffff;
+}
+
+.palletCardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  background: #f1f5f9;
+  border-bottom: 1px solid #e2e8f0;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.palletTitle {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0f172a;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.palletCodeTag {
+  font-family: monospace;
+  font-size: 11px;
+  background: #e2e8f0;
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: #334155;
+  font-weight: 600;
+}
+
+.palletVerifyBtn {
+  background: rgba(35, 122, 75, 0.1);
+  color: var(--green);
+  border: 1px solid rgba(35, 122, 75, 0.3);
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.15s ease;
+}
+
+.palletVerifyBtn:hover {
+  background: var(--green);
+  color: #ffffff;
+}
+
+.palletUnitGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 8px;
+  padding: 12px 14px;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.palletUnitItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+  font-size: 12px;
+  background: #f8fafc;
+}
+
+.palletUnitVerified {
+  background: #f0fdf4;
+  border-color: #86efac;
+}
+
+.videoCameraActive {
+  width: 100%;
+  max-height: 240px;
+  object-fit: cover;
+  border-radius: 8px;
+  display: block;
+}
+
+/* ── Product Summary Out of Table ────────────────────────────────── */
+
+.productSummaryCard {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 16px 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.palletizedInfoBox {
+  background: rgba(2, 132, 199, 0.08);
+  border: 1px solid rgba(2, 132, 199, 0.25);
+  border-radius: 8px;
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: right;
+}
+
+.unitScrollTableWrap {
+  max-height: 480px;
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  position: relative;
+}
+
+.unitScrollTableWrap table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.unitScrollTableWrap thead th {
+  position: sticky;
+  top: 0;
+  background: var(--surface-soft);
+  z-index: 2;
+  box-shadow: 0 1px 0 var(--line);
+  padding: 10px 12px;
+  text-align: left;
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.unitScrollTableWrap tbody td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: middle;
+}
+
+.unitRowVerified {
+  background: rgba(35, 122, 75, 0.06);
+}
+
+.unitRowVerified td {
+  border-bottom-color: rgba(35, 122, 75, 0.15) !important;
+}
+
+.matchPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.matchPillComplete {
+  background: rgba(35, 122, 75, 0.12);
+  color: var(--green);
+  border: 1px solid rgba(35, 122, 75, 0.3);
+}
+
+.matchPillPending {
+  background: rgba(148, 163, 184, 0.12);
+  color: var(--muted);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+}
+
+.matchPillPartial {
+  background: rgba(217, 119, 6, 0.12);
+  color: var(--amber);
+  border: 1px solid rgba(217, 119, 6, 0.3);
+}
+
+.filterPill {
+  padding: 5px 12px;
+  border-radius: 9999px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.filterPill:hover {
+  background: var(--surface-soft);
+  color: var(--text);
+}
+
+.filterPillActive {
+  background: var(--text) !important;
+  color: var(--surface) !important;
+  border-color: var(--text) !important;
+  font-weight: 600;
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   ORIGINAL SUPPLIER EXCEL SAMPLE SPREADSHEET VIEWER (HIGH FIDELITY EXCEL UI)
+   ────────────────────────────────────────────────────────────────────────── */
+
+.excelModal {
+  background: #ffffff;
+  color: #0f172a;
+  width: 96vw;
+  max-width: 1240px;
+  height: 90vh;
+  max-height: 90vh;
+  border-radius: 8px;
+  box-shadow: 0 25px 65px rgba(0, 0, 0, 0.45);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid #94a3b8;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Calibri, sans-serif;
+  animation: invoiceSlideUp 0.22s ease-out;
+}
+
+.excelWindowBar {
+  background: #107c41;
+  color: #ffffff;
+  padding: 6px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  user-select: none;
+}
+
+.excelWindowTitle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12.5px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+
+.excelIconX {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  background: #0d6334;
+  color: #ffffff;
+  font-weight: 900;
+  font-size: 13px;
+  border-radius: 3px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.excelAutoSavePill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 2px 8px;
+  border-radius: 12px;
+}
+
+.excelWindowControls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.excelWindowBtn {
+  background: transparent;
+  border: none;
+  color: #ffffff;
+  font-size: 14px;
+  width: 26px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border-radius: 3px;
+  transition: background 0.15s ease;
+}
+
+.excelWindowBtn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.excelWindowBtnClose:hover {
+  background: #dc2626 !important;
+}
+
+.excelRibbon {
+  background: #f8fafc;
+  border-bottom: 1px solid #cbd5e1;
+  padding: 4px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.excelRibbonTabs {
+  display: flex;
+  gap: 2px;
+}
+
+.excelRibbonTab {
+  padding: 5px 12px;
+  font-size: 12px;
+  color: #475569;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  font-weight: 500;
+}
+
+.excelRibbonTab:hover {
+  color: #0f172a;
+}
+
+.excelRibbonTabActive {
+  color: #107c41 !important;
+  font-weight: 700 !important;
+  border-bottom: 2px solid #107c41 !important;
+  background: #ffffff !important;
+}
+
+.excelRibbonActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.excelDownloadBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #107c41;
+  color: #ffffff;
+  border: 1px solid #0d6334;
+  padding: 4px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.excelDownloadBtn:hover {
+  background: #0d6334;
+}
+
+.excelFormulaBar {
+  background: #f1f5f9;
+  border-bottom: 1px solid #cbd5e1;
+  padding: 4px 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.excelNameBox {
+  width: 65px;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  padding: 2px 6px;
+  font-weight: 600;
+  font-size: 12px;
+  color: #0f172a;
+  text-align: center;
+  border-radius: 2px;
+}
+
+.excelFxLabel {
+  color: #64748b;
+  font-style: italic;
+  font-weight: 700;
+  font-size: 13px;
+  user-select: none;
+}
+
+.excelFormulaInput {
+  flex: 1;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  padding: 3px 8px;
+  font-size: 12px;
+  color: #0f172a;
+  border-radius: 2px;
+  outline: none;
+}
+
+.excelSheetContainer {
+  flex: 1;
+  overflow: auto;
+  background: #ffffff;
+  position: relative;
+}
+
+.excelGridTable {
+  border-collapse: collapse;
+  width: 100%;
+  min-width: 1180px;
+  table-layout: auto;
+  font-size: 12px;
+  color: #0f172a;
+  font-family: Calibri, "Segoe UI", Arial, sans-serif;
+}
+
+.excelColHeader {
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  color: #475569;
+  font-weight: 600;
+  text-align: center;
+  padding: 3px 6px;
+  font-size: 11px;
+  user-select: none;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+
+.excelRowHeader {
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  color: #475569;
+  font-weight: 600;
+  text-align: center;
+  width: 38px;
+  min-width: 38px;
+  padding: 3px 4px;
+  font-size: 11px;
+  user-select: none;
+}
+
+.excelCell {
+  border: 1px solid #e2e8f0;
+  padding: 4px 8px;
+  white-space: nowrap;
+  font-size: 12px;
+}
+
+.excelCellSelected {
+  outline: 2px solid #107c41;
+  outline-offset: -1px;
+  background: #f0fdf4 !important;
+}
+
+.excelTableHeader {
+  background: #107c41;
+  color: #ffffff;
+  font-weight: 700;
+  border: 1px solid #0d6334;
+  padding: 6px 10px;
+  font-size: 12px;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.excelRowVerified {
+  background: #f0fdf4;
+}
+
+.excelRowVerified:hover {
+  background: #dcfce7;
+}
+
+.excelRowPending:hover {
+  background: #f8fafc;
+}
+
+.excelBottomBar {
+  background: #f1f5f9;
+  border-top: 1px solid #cbd5e1;
+  padding: 4px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11.5px;
+  color: #475569;
+}
+
+.excelSheetTabs {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.excelSheetTab {
+  padding: 3px 12px;
+  background: #e2e8f0;
+  border: 1px solid #cbd5e1;
+  border-bottom: none;
+  border-radius: 4px 4px 0 0;
+  font-size: 11.5px;
+  color: #475569;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.excelSheetTabActive {
+  background: #ffffff !important;
+  color: #107c41 !important;
+  font-weight: 700 !important;
+  border-bottom: 2px solid #107c41 !important;
+}
+
+/* ── Stock Transfer Tab & Relocation Route Picker ────────────────── */
+
+.transferHeaderRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.transferRoutePicker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 12px;
+  flex-wrap: wrap;
+}
+
+.transferWhSelect {
+  border: 1px solid var(--line);
+  background: var(--surface-soft);
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  outline: none;
+}
+
+.transferWhSelect:focus {
+  border-color: #0284c7;
+}
+
+.transferSwapBtn {
+  background: rgba(14, 165, 233, 0.1);
+  color: #0284c7;
+  border: 1px solid rgba(14, 165, 233, 0.3);
+  padding: 6px 10px;
+  border-radius: 6px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.transferSwapBtn:hover {
+  background: #0284c7;
+  color: #ffffff;
+}
+
+.btnNewTransfer {
+  background: #0284c7;
+  color: #ffffff;
+  border: none;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+  box-shadow: 0 1px 3px rgba(2, 132, 199, 0.3);
+}
+
+.btnNewTransfer:hover {
+  background: #0369a1;
+}
+
+.transferModalBackdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.5);
+  backdrop-filter: blur(4px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.transferModal {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  width: 100%;
+  max-width: 520px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+}
+
+.transferModalHeader {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.transferModalTitle {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--ink);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.transferModalBody {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.transferModalFooter {
+  padding: 14px 20px;
+  border-top: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  background: var(--surface-soft);
+  border-radius: 0 0 14px 14px;
+}
+
+/* ── Online Banking Style Stock Transfer ─────────────────────────────── */
+
+.bankingTransferContainer {
+  max-width: 960px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.bankingTransferCard {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+}
+
+.bankingCardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.bankingCardTitle {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--ink);
+  margin: 0 0 4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.bankingCardSub {
+  font-size: 13px;
+  color: var(--muted);
+  margin: 0;
+}
+
+.bankingRouteRow {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+@media (max-width: 768px) {
+  .bankingRouteRow {
+    grid-template-columns: 1fr;
+  }
+}
+
+.bankingAccountCard {
+  background: var(--surface-soft);
+  border: 1.5px solid var(--line);
+  border-radius: 12px;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.bankingAccountCard:focus-within {
+  border-color: #0284c7;
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+}
+
+.bankingAccountLabel {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.bankingAccountSelect {
+  width: 100%;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  padding: 10px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  outline: none;
+}
+
+.bankingAccountBalance {
+  font-size: 12px;
+  color: #0284c7;
+  font-weight: 600;
+  background: rgba(14, 165, 233, 0.08);
+  padding: 4px 8px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.bankingSwapCircle {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(14, 165, 233, 0.12);
+  color: #0284c7;
+  border: 1.5px solid rgba(14, 165, 233, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 18px;
+  font-weight: 700;
+  transition: all 0.2s ease;
+  margin: 0 auto;
+}
+
+.bankingSwapCircle:hover {
+  background: #0284c7;
+  color: #ffffff;
+  transform: rotate(180deg) scale(1.05);
+  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3);
+}
+
+.bankingAmountGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+@media (max-width: 640px) {
+  .bankingAmountGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.bankingFieldGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.bankingFieldLabel {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.bankingQuickQtyRow {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+  flex-wrap: wrap;
+}
+
+.bankingQuickQtyBtn {
+  background: var(--surface-soft);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.bankingQuickQtyBtn:hover {
+  background: #0284c7;
+  color: #ffffff;
+  border-color: #0284c7;
+}
+
+.bankingReceiptBackdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(6px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.bankingReceiptCard {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  max-width: 480px;
+  width: 100%;
+  padding: 32px 28px 24px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  animation: receiptPop 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes receiptPop {
+  0% { transform: scale(0.92); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.bankingReceiptCheck {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: #22c55e;
+  color: #ffffff;
+  font-size: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+  box-shadow: 0 8px 24px rgba(34, 197, 94, 0.35);
+}
+
+.bankingReceiptTitle {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--ink);
+  margin: 0 0 6px;
+}
+
+.bankingReceiptSub {
+  font-size: 13px;
+  color: var(--muted);
+  margin: 0 0 20px;
+}
+
+.bankingReceiptDetails {
+  width: 100%;
+  background: var(--surface-soft);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 24px;
+  text-align: left;
+}
+
+.bankingReceiptRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+}
+
+.bankingReceiptRowLabel {
+  color: var(--muted);
+}
+
+.bankingReceiptRowVal {
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.bankingReceiptActions {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+}
+
+
+
+
+
+
+
+
