@@ -1,4 +1,4 @@
-﻿import type { NextConfig } from "next";
+import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
@@ -22,6 +22,15 @@ const nextConfig: NextConfig = {
         hostname: "**",
       },
     ],
+  },
+  async redirects() {
+    return [
+      {
+        source: "/",
+        destination: "/warehouse",
+        permanent: false,
+      },
+    ];
   },
 };
 
