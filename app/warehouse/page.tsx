@@ -251,11 +251,11 @@ function countLabel(value: number | null) {
 
 type TabId = "home" | "transfer" | "stock" | "customers";
 
-const TABS: { id: TabId; label: string }[] = [
-  { id: "home", label: "Home" },
-  { id: "transfer", label: "Stock Transfer" },
-  { id: "stock", label: "Stock Details" },
-  { id: "customers", label: "Customer Details" },
+const TABS: { id: TabId; label: string; shortLabel: string }[] = [
+  { id: "home", label: "Home", shortLabel: "Home" },
+  { id: "transfer", label: "Stock Transfer", shortLabel: "Transfer" },
+  { id: "stock", label: "Stock Details", shortLabel: "Stock" },
+  { id: "customers", label: "Customer Details", shortLabel: "Customers" },
 ];
 
 function Dashboard({
@@ -431,7 +431,8 @@ function Dashboard({
             onClick={() => setTab(t.id)}
             aria-current={tab === t.id ? "page" : undefined}
           >
-            {t.label}
+            <span className={styles.tabLabelFull}>{t.label}</span>
+            <span className={styles.tabLabelShort}>{t.shortLabel}</span>
           </button>
         ))}
       </nav>
@@ -4359,35 +4360,39 @@ function HomeTab({
             </div>
           </div>
 
-          {/* 1. Stock Balance Cards for Inverter, Panel, Battery (On hand only) */}
-          <div className={styles.typeGrid}>
+          {/* 1. Stock Balance Cards for Inverter, Panel, Battery (On hand only) — Single row for desktop & phone */}
+          <div className={styles.balanceGrid}>
             {balances.map((card) => {
               const cardContent = (
                 <>
-                  <div className={styles.balanceCardHeader}>
-                    <span className={styles.typeName}>{card.label}</span>
-                    <span className={`${styles.tag} ${styles.check}`}>
-                      {whFilter === "all" ? "JB & KL" : `${whFilter} WH`}
-                    </span>
-                  </div>
-                  <div className={styles.onHandMain}>
-                    <strong className={styles.onHandNumber}>{card.onHand}</strong>
-                    <span className={styles.onHandLabel}>On hand</span>
-                  </div>
-                  {whFilter === "all" ? (
-                    <div className={styles.onHandSplit}>
-                      <span><strong>JB:</strong> {WH_SPLIT[card.id]?.JB ?? 0}</span>
-                      <span><strong>KL:</strong> {WH_SPLIT[card.id]?.KL ?? 0}</span>
+                  <div className={styles.balanceCardBody}>
+                    <div className={styles.balanceCardHeader}>
+                      <span className={styles.typeName}>{card.label}</span>
+                      <span className={`${styles.tag} ${styles.check}`}>
+                        {whFilter === "all" ? "JB & KL" : `${whFilter} WH`}
+                      </span>
                     </div>
-                  ) : (
-                    <div className={styles.onHandSplit}>
-                      <span>{whFilter === "JB" ? "Johor Bahru Warehouse" : "Kuala Lumpur Warehouse"}</span>
+                    <div className={styles.onHandMain}>
+                      <strong className={styles.onHandNumber}>{card.onHand}</strong>
+                      <span className={styles.onHandLabel}>On hand</span>
                     </div>
-                  )}
-                  {card.id === "inverter" && (
+                    {whFilter === "all" ? (
+                      <div className={styles.onHandSplit}>
+                        <span><strong>JB:</strong> {WH_SPLIT[card.id]?.JB ?? 0}</span>
+                        <span><strong>KL:</strong> {WH_SPLIT[card.id]?.KL ?? 0}</span>
+                      </div>
+                    ) : (
+                      <div className={styles.onHandSplit}>
+                        <span>{whFilter === "JB" ? "JB Warehouse" : "KL Warehouse"}</span>
+                      </div>
+                    )}
+                  </div>
+                  {card.id === "inverter" ? (
                     <div className={styles.balanceHint}>
                       <span>View models &rarr;</span>
                     </div>
+                  ) : (
+                    <div className={styles.balanceHintPlaceholder} aria-hidden="true" />
                   )}
                 </>
               );
@@ -4396,7 +4401,7 @@ function HomeTab({
                 return (
                   <button
                     key={card.id}
-                    className={styles.typeCard}
+                    className={`${styles.typeCard} ${styles.balanceCard}`}
                     type="button"
                     onClick={onInverterOpen}
                   >
@@ -4406,7 +4411,7 @@ function HomeTab({
               }
 
               return (
-                <article key={card.id} className={styles.typeCard}>
+                <article key={card.id} className={`${styles.typeCard} ${styles.balanceCard}`}>
                   {cardContent}
                 </article>
               );
@@ -4435,15 +4440,15 @@ function HomeTab({
             <div className={styles.txSummaryRow}>
               {/* This Week In */}
               <div className={styles.txKpiCard}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "10px" }}>
-                  <div>
+                <div className={styles.txKpiHeader}>
+                  <div className={styles.txKpiTitles}>
                     <span className={styles.txKpiLabel}>This Week In</span>
-                    <small className={styles.txKpiSub} style={{ display: "block", marginTop: "1px" }}>
-                      Supplier deliveries received
+                    <small className={styles.txKpiSub}>
+                      Supplier deliveries
                     </small>
                   </div>
                   <span className={`${styles.txKpiValue} ${styles.txKpiIn}`}>
-                    +{inBreakdown.total} <span style={{ fontSize: "13px", fontWeight: 500 }}>units</span>
+                    +{inBreakdown.total} <span className={styles.txKpiUnit}>units</span>
                   </span>
                 </div>
 
@@ -4457,7 +4462,10 @@ function HomeTab({
                     }}
                     title="Click to filter Inverters Stock In"
                   >
-                    <span className={styles.txKpiCatName}>Inverter</span>
+                    <span className={styles.txKpiCatName}>
+                      <span className={styles.catLabelFull}>Inverter</span>
+                      <span className={styles.catLabelShort}>Inv</span>
+                    </span>
                     <strong className={styles.txKpiCatValIn}>+{inBreakdown.inverter}</strong>
                   </div>
 
@@ -4469,7 +4477,10 @@ function HomeTab({
                     }}
                     title="Click to filter Panels Stock In"
                   >
-                    <span className={styles.txKpiCatName}>Panel</span>
+                    <span className={styles.txKpiCatName}>
+                      <span className={styles.catLabelFull}>Panel</span>
+                      <span className={styles.catLabelShort}>Pan</span>
+                    </span>
                     <strong className={styles.txKpiCatValIn}>+{inBreakdown.panel}</strong>
                   </div>
 
@@ -4481,7 +4492,10 @@ function HomeTab({
                     }}
                     title="Click to filter Batteries Stock In"
                   >
-                    <span className={styles.txKpiCatName}>Battery</span>
+                    <span className={styles.txKpiCatName}>
+                      <span className={styles.catLabelFull}>Battery</span>
+                      <span className={styles.catLabelShort}>Bat</span>
+                    </span>
                     <strong className={styles.txKpiCatValIn}>+{inBreakdown.battery}</strong>
                   </div>
                 </div>
@@ -4489,15 +4503,15 @@ function HomeTab({
 
               {/* This Week Out */}
               <div className={styles.txKpiCard}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "10px" }}>
-                  <div>
+                <div className={styles.txKpiHeader}>
+                  <div className={styles.txKpiTitles}>
                     <span className={styles.txKpiLabel}>This Week Out</span>
-                    <small className={styles.txKpiSub} style={{ display: "block", marginTop: "1px" }}>
-                      Dispatched for installations
+                    <small className={styles.txKpiSub}>
+                      Dispatched for installs
                     </small>
                   </div>
                   <span className={`${styles.txKpiValue} ${styles.txKpiOut}`}>
-                    -{outBreakdown.total} <span style={{ fontSize: "13px", fontWeight: 500 }}>units</span>
+                    -{outBreakdown.total} <span className={styles.txKpiUnit}>units</span>
                   </span>
                 </div>
 
@@ -4511,7 +4525,10 @@ function HomeTab({
                     }}
                     title="Click to filter Inverters Stock Out"
                   >
-                    <span className={styles.txKpiCatName}>Inverter</span>
+                    <span className={styles.txKpiCatName}>
+                      <span className={styles.catLabelFull}>Inverter</span>
+                      <span className={styles.catLabelShort}>Inv</span>
+                    </span>
                     <strong className={styles.txKpiCatValOut}>-{outBreakdown.inverter}</strong>
                   </div>
 
@@ -4523,7 +4540,10 @@ function HomeTab({
                     }}
                     title="Click to filter Panels Stock Out"
                   >
-                    <span className={styles.txKpiCatName}>Panel</span>
+                    <span className={styles.txKpiCatName}>
+                      <span className={styles.catLabelFull}>Panel</span>
+                      <span className={styles.catLabelShort}>Pan</span>
+                    </span>
                     <strong className={styles.txKpiCatValOut}>-{outBreakdown.panel}</strong>
                   </div>
 
@@ -4535,7 +4555,10 @@ function HomeTab({
                     }}
                     title="Click to filter Batteries Stock Out"
                   >
-                    <span className={styles.txKpiCatName}>Battery</span>
+                    <span className={styles.txKpiCatName}>
+                      <span className={styles.catLabelFull}>Battery</span>
+                      <span className={styles.catLabelShort}>Bat</span>
+                    </span>
                     <strong className={styles.txKpiCatValOut}>-{outBreakdown.battery}</strong>
                   </div>
                 </div>
@@ -4543,15 +4566,15 @@ function HomeTab({
 
               {/* This Week Inter-Warehouse Transfers */}
               <div className={styles.txKpiCard}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "10px" }}>
-                  <div>
+                <div className={styles.txKpiHeader}>
+                  <div className={styles.txKpiTitles}>
                     <span className={styles.txKpiLabel}>This Week Transfer</span>
-                    <small className={styles.txKpiSub} style={{ display: "block", marginTop: "1px" }}>
-                      Inter-warehouse rebalancing
+                    <small className={styles.txKpiSub}>
+                      Inter-WH rebalance
                     </small>
                   </div>
                   <span className={`${styles.txKpiValue} ${styles.txQtyTransfer}`}>
-                    🔄 {transferBreakdown.total} <span style={{ fontSize: "13px", fontWeight: 500 }}>units</span>
+                    {transferBreakdown.total} <span className={styles.txKpiUnit}>units</span>
                   </span>
                 </div>
 
@@ -4565,8 +4588,11 @@ function HomeTab({
                     }}
                     title="Click to filter Inverters Transfer"
                   >
-                    <span className={styles.txKpiCatName}>Inverter</span>
-                    <strong className={styles.txQtyTransfer}>🔄{transferBreakdown.inverter}</strong>
+                    <span className={styles.txKpiCatName}>
+                      <span className={styles.catLabelFull}>Inverter</span>
+                      <span className={styles.catLabelShort}>Inv</span>
+                    </span>
+                    <strong className={styles.txQtyTransfer}>{transferBreakdown.inverter}</strong>
                   </div>
 
                   <div
@@ -4577,8 +4603,11 @@ function HomeTab({
                     }}
                     title="Click to filter Panels Transfer"
                   >
-                    <span className={styles.txKpiCatName}>Panel</span>
-                    <strong className={styles.txQtyTransfer}>🔄{transferBreakdown.panel}</strong>
+                    <span className={styles.txKpiCatName}>
+                      <span className={styles.catLabelFull}>Panel</span>
+                      <span className={styles.catLabelShort}>Pan</span>
+                    </span>
+                    <strong className={styles.txQtyTransfer}>{transferBreakdown.panel}</strong>
                   </div>
 
                   <div
@@ -4589,8 +4618,11 @@ function HomeTab({
                     }}
                     title="Click to filter Batteries Transfer"
                   >
-                    <span className={styles.txKpiCatName}>Battery</span>
-                    <strong className={styles.txQtyTransfer}>🔄{transferBreakdown.battery}</strong>
+                    <span className={styles.txKpiCatName}>
+                      <span className={styles.catLabelFull}>Battery</span>
+                      <span className={styles.catLabelShort}>Bat</span>
+                    </span>
+                    <strong className={styles.txQtyTransfer}>{transferBreakdown.battery}</strong>
                   </div>
                 </div>
               </div>

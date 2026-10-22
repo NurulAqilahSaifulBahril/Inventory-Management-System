@@ -226,6 +226,17 @@
 .screen {
   max-width: 420px;
   margin: 0 auto;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+@media (max-width: 480px) {
+  .page {
+    padding: 16px 8px 32px;
+  }
+  .screen {
+    max-width: 100%;
+  }
 }
 
 .screen h1 {
@@ -642,31 +653,61 @@ button.typeCard {
 /* ── Tab bar ─────────────────────────────────────────────────────────── */
 
 .tabBar {
-  max-width: 580px;
+  max-width: 420px;
   width: 100%;
   margin: 0 auto 16px;
   display: flex;
-  gap: 4px;
+  gap: 2px;
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 10px;
-  padding: 3px;
+  padding: 2px;
+  box-sizing: border-box;
+}
+
+@media (max-width: 480px) {
+  .tabBar {
+    max-width: 100%;
+    margin-bottom: 12px;
+  }
 }
 
 .tab {
-  flex: 1;
+  flex: 1 1 0;
+  min-width: 0;
   border: 0;
   background: transparent;
   color: var(--muted);
   font: inherit;
-  font-size: 13px;
+  font-size: 11.5px;
   font-weight: 500;
-  padding: 7px 10px;
+  padding: 7px 2px;
   border-radius: 8px;
   cursor: pointer;
   transition: background 0.15s ease, color 0.15s ease;
   white-space: nowrap;
   text-align: center;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.tabLabelFull {
+  display: none;
+}
+
+.tabLabelShort {
+  display: inline;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.desktop .tabLabelFull {
+  display: inline;
+}
+
+.desktop .tabLabelShort {
+  display: none;
 }
 
 .tab:hover {
@@ -1084,10 +1125,13 @@ button.typeCard {
 
 .desktop .tabBar {
   margin-bottom: 24px;
+  gap: 6px;
+  padding: 4px;
 }
 
 .desktop .tab {
   flex: 0 0 auto;
+  font-size: 13px;
   padding: 8px 20px;
 }
 
@@ -1361,6 +1405,8 @@ button.typeCard {
 
 .brandBar {
   max-width: 420px;
+  width: 100%;
+  box-sizing: border-box;
   margin: 0 auto 14px;
   display: flex;
   align-items: center;
@@ -1584,11 +1630,162 @@ button.typeCard {
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
 }
 
+/* ── Stock Balance Single-Row Cards (Desktop & Phone) ───────────────── */
+
+.balanceGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+  align-items: stretch;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+@media (min-width: 480px) {
+  .balanceGrid {
+    gap: 6px;
+  }
+}
+
+.desktop .balanceGrid,
+@media (min-width: 900px) {
+  .balanceGrid {
+    gap: 12px;
+  }
+}
+
+.balanceCard {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 100%;
+  min-width: 0;
+  padding: 8px 6px;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.desktop .balanceCard,
+@media (min-width: 900px) {
+  .balanceCard {
+    padding: 16px;
+  }
+}
+
+.balanceCardBody {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
 .balanceCardHeader {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 8px;
+  gap: 3px;
+  margin-bottom: 4px;
+  min-width: 0;
+}
+
+.balanceCard .typeName {
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.desktop .balanceCard .typeName,
+@media (min-width: 900px) {
+  .balanceCard .typeName {
+    font-size: 15px;
+  }
+}
+
+.balanceCard .tag {
+  font-size: 9px;
+  padding: 1px 4px;
+  margin-top: 0;
+  flex-shrink: 0;
+}
+
+.balanceCard .onHandMain {
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+  margin: 3px 0 6px;
+  flex-wrap: wrap;
+}
+
+.balanceCard .onHandNumber {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.desktop .balanceCard .onHandNumber,
+@media (min-width: 900px) {
+  .balanceCard .onHandNumber {
+    font-size: 34px;
+  }
+}
+
+.balanceCard .onHandLabel {
+  font-size: 10.5px;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.desktop .balanceCard .onHandLabel,
+@media (min-width: 900px) {
+  .balanceCard .onHandLabel {
+    font-size: 13px;
+  }
+}
+
+.balanceCard .onHandSplit {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 2px;
+  font-size: 10px;
+  color: var(--muted);
+  padding-top: 5px;
+  border-top: 1px solid var(--line);
+  flex-wrap: wrap;
+  margin-top: auto;
+}
+
+.balanceCard .onHandSplit strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.desktop .balanceCard .onHandSplit,
+@media (min-width: 900px) {
+  .balanceCard .onHandSplit {
+    font-size: 12px;
+    gap: 14px;
+    padding-top: 8px;
+  }
+}
+
+.balanceCard .balanceHint {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 4px;
+  font-size: 9.5px;
+  color: var(--muted);
+}
+
+.balanceHintPlaceholder {
+  height: 13px;
+  margin-top: 4px;
 }
 
 .balanceBadge {
@@ -1681,35 +1878,117 @@ button.typeCard {
 
 .txSummaryRow {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
   margin-bottom: 14px;
+  align-items: stretch;
+  width: 100%;
+  box-sizing: border-box;
 }
 
-.desktop .txSummaryRow {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+@media (min-width: 480px) {
+  .txSummaryRow {
+    gap: 6px;
+  }
+}
+
+.desktop .txSummaryRow,
+@media (min-width: 900px) {
+  .txSummaryRow {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+  }
 }
 
 .txKpiCard {
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 8px;
-  padding: 10px 14px;
+  padding: 7px 5px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-width: 0;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.desktop .txKpiCard,
+@media (min-width: 900px) {
+  .txKpiCard {
+    padding: 12px 14px;
+    border-radius: 10px;
+  }
+}
+
+.txKpiHeader {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  min-width: 0;
+}
+
+.desktop .txKpiHeader,
+@media (min-width: 900px) {
+  .txKpiHeader {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 6px;
+  }
+}
+
+.txKpiTitles {
+  min-width: 0;
 }
 
 .txKpiLabel {
-  font-size: 11px;
-  color: var(--muted);
-  font-weight: 500;
+  font-size: 10.5px;
+  color: var(--ink);
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+}
+
+.desktop .txKpiLabel,
+@media (min-width: 900px) {
+  .txKpiLabel {
+    font-size: 12px;
+    color: var(--muted);
+  }
 }
 
 .txKpiValue {
-  font-size: 20px;
-  font-weight: 600;
+  font-size: 15px;
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+  white-space: nowrap;
+  margin: 1px 0;
+}
+
+.desktop .txKpiValue,
+@media (min-width: 900px) {
+  .txKpiValue {
+    font-size: 20px;
+    margin: 0;
+  }
+}
+
+.txKpiUnit {
+  font-size: 9.5px;
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.desktop .txKpiUnit,
+@media (min-width: 900px) {
+  .txKpiUnit {
+    font-size: 13px;
+  }
 }
 
 .txKpiIn {
@@ -1721,18 +2000,42 @@ button.typeCard {
 }
 
 .txKpiSub {
-  font-size: 11px;
+  font-size: 8.5px;
   color: var(--muted);
-  margin-top: 2px;
+  line-height: 1.15;
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.desktop .txKpiSub,
+@media (min-width: 900px) {
+  .txKpiSub {
+    font-size: 11px;
+    margin-top: 2px;
+  }
 }
 
 .txKpiBreakdownGrid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 6px;
-  margin-top: 10px;
-  padding-top: 10px;
+  gap: 2px;
+  margin-top: 5px;
+  padding-top: 5px;
   border-top: 1px dashed var(--line);
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.desktop .txKpiBreakdownGrid,
+@media (min-width: 900px) {
+  .txKpiBreakdownGrid {
+    gap: 6px;
+    margin-top: 10px;
+    padding-top: 10px;
+  }
 }
 
 .txKpiCatChip {
@@ -1740,13 +2043,24 @@ button.typeCard {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 6px 4px;
+  padding: 3px 1px;
   background: var(--surface-soft);
   border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: 5px;
   cursor: pointer;
   transition: all 0.15s ease;
   user-select: none;
+  min-width: 0;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.desktop .txKpiCatChip,
+@media (min-width: 900px) {
+  .txKpiCatChip {
+    padding: 6px 4px;
+    border-radius: 6px;
+  }
 }
 
 .txKpiCatChip:hover {
@@ -1761,24 +2075,67 @@ button.typeCard {
 }
 
 .txKpiCatName {
-  font-size: 10px;
+  font-size: 9px;
   color: var(--muted);
   font-weight: 600;
   white-space: nowrap;
 }
 
+.desktop .txKpiCatName,
+@media (min-width: 900px) {
+  .txKpiCatName {
+    font-size: 10px;
+  }
+}
+
+.catLabelFull {
+  display: none;
+}
+
+.catLabelShort {
+  display: inline;
+}
+
+.desktop .catLabelFull,
+@media (min-width: 900px) {
+  .catLabelFull {
+    display: inline;
+  }
+  .catLabelShort {
+    display: none;
+  }
+}
+
 .txKpiCatValIn {
-  font-size: 13px;
+  font-size: 10.5px;
   font-weight: 700;
   color: var(--green);
-  margin-top: 2px;
+  margin-top: 1px;
+  white-space: nowrap;
+}
+
+.desktop .txKpiCatValIn,
+@media (min-width: 900px) {
+  .txKpiCatValIn {
+    font-size: 13px;
+    margin-top: 2px;
+  }
 }
 
 .txKpiCatValOut {
-  font-size: 13px;
+  font-size: 10.5px;
   font-weight: 700;
   color: var(--red);
-  margin-top: 2px;
+  margin-top: 1px;
+  white-space: nowrap;
+}
+
+.desktop .txKpiCatValOut,
+@media (min-width: 900px) {
+  .txKpiCatValOut {
+    font-size: 13px;
+    margin-top: 2px;
+  }
 }
 
 
