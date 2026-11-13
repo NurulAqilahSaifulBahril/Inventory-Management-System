@@ -95,6 +95,16 @@ export async function requireUser(): Promise<WarehouseSessionUser> {
   throw new AuthError("Not signed in.", 401);
 }
 
+// Signed in to Inventory Management itself: only a person added in the Admin tab (an active
+// warehouse user) has such a session. The Scheduling dashboard login does not count here, so it
+// cannot open the Inventory Management page.
+export async function requireWarehouseUser(): Promise<WarehouseSessionUser> {
+  const store = await cookies();
+  const user = await warehouseSessionUser(store.get(WAREHOUSE_COOKIE)?.value);
+  if (!user) throw new AuthError("Not signed in.", 401);
+  return user;
+}
+
 export async function requireAdmin(): Promise<WarehouseSessionUser> {
   const user = await requireUser();
   if (user.role !== "admin") throw new AuthError("Admin access required.", 403);

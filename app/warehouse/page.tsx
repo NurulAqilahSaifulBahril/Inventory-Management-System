@@ -4,6 +4,9 @@ import AdminTab from "./AdminTab";
 import { PO_ITEM_TYPE_OPTIONS, UploadDoButton, poDay, useDoFiles } from "./DoFiles";
 import { cameraErrorMessage, openCameraStream } from "./camera";
 import PoVerificationPage from "./PoVerification";
+import { DownloadReportButton, reportFileName } from "./ReportDownload";
+import { PvDrawingImage } from "./PvDrawingImage";
+import { DateNav } from "./DateNav";
 import { classifyInvoiceLines, parseCountedItem } from "./invoice-lines";
 import { estimateMounting, ROOF_OPTIONS, type MountingSystemId, type Orientation, type RoofType } from "./mounting-estimate";
 import { FormEvent, Fragment, useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from "react";
@@ -83,7 +86,22 @@ export default function WarehousePage() {
       if (!cancelled) setReady(true);
     }, 4000);
     fetch("/api/warehouse/me", { credentials: "same-origin", cache: "no-store" })
-      .then(async (res) => (res.ok ? ((await res.json()) as { signedIn?: boolean; username?: string; access?: string; phone?: string }) : null))
+      .then(async (res) => {
+        // Not signed in (or removed / deactivated in the Admin tab): forget this tab's sign-in
+        // so the sign-in screen shows. Other failures (no connection) keep it.
+        if (res.status === 401 || res.status === 403) {
+          if (!cancelled) {
+            window.sessionStorage.removeItem(SESSION_KEY);
+            window.sessionStorage.removeItem(NAME_KEY);
+            window.sessionStorage.removeItem(ACCESS_KEY);
+            setSignedInPhone(null);
+            setSignedInUsername("");
+            setSignedInAccess("");
+          }
+          return null;
+        }
+        return res.ok ? ((await res.json()) as { signedIn?: boolean; username?: string; access?: string; phone?: string }) : null;
+      })
       .then((me) => {
         if (cancelled || !me?.signedIn) return;
         const flag = storedPhone || me.phone || "signed-in";
@@ -119,8 +137,8 @@ export default function WarehousePage() {
       setError("Enter the 6-digit OTP.");
       return;
     }
-    // Sign in for real: a registered phone number gets a warehouse session (the data routes need it),
-    // and the same answer tells us the username to greet and the access level.
+    // Only a phone number added in the Admin tab (an active user) is let in: the server checks it
+    // and gives a warehouse session, and the same answer tells us the username and access level.
     let username = "";
     let access = "";
     try {
@@ -130,13 +148,16 @@ export default function WarehousePage() {
         credentials: "same-origin",
         body: JSON.stringify({ phone: trimmed, otp: code.trim() }),
       });
-      if (response.ok) {
-        const data = (await response.json()) as { username?: string | null; access?: string | null };
-        username = data.username ?? "";
-        access = data.access ?? "";
+      const data = (await response.json().catch(() => ({}))) as { username?: string | null; access?: string | null; error?: string };
+      if (!response.ok) {
+        setError(data.error || "Could not sign in. Try again.");
+        return;
       }
+      username = data.username ?? "";
+      access = data.access ?? "";
     } catch {
-      // No session: the page still opens, without the live data.
+      setError("Could not reach the server. Check the connection and try again.");
+      return;
     }
     window.sessionStorage.setItem(SESSION_KEY, trimmed);
     window.sessionStorage.setItem(NAME_KEY, username);
@@ -333,8 +354,22 @@ function countLabel(value: number | null) {
   return value === null ? "—" : String(value);
 }
 
-type VerificationMaterial = "job" | "panel" | "inverter" | "battery" | "mounting" | "electrical";
+// "loaded": a verified Stock Out's items were moved to the customer's house (Loading tab).
+type VerificationMaterial =
+  | "job"
+  | "panel"
+  | "inverter"
+  | "battery"
+  | "mounting"
+  // Mounting Structure is packed in two parts, each with its own "Packed by".
+  | "mounting_rail"
+  | "mounting_hook"
+  | "electrical"
+  | "commercial"
+  | "loaded";
 type VerificationRecord = { jobRef: string; material: string; by: string };
+// Transactions table tabs. Loading (Stock Out only): verified jobs already moved to the customer's house.
+type TxStatusTab = "toVerify" | "verified" | "loading";
 
 type StockItemTab = "panel" | "inverter" | "battery" | "other" | "mounting" | "special";
 
@@ -343,7 +378,7 @@ type TabId = "home" | "transfer" | "stock" | "customers" | "admin";
 const TABS: { id: TabId; label: string; shortLabel: string }[] = [
   { id: "home", label: "Home", shortLabel: "Home" },
   { id: "stock", label: "Stock Details", shortLabel: "Stock" },
-  { id: "customers", label: "Customer Details", shortLabel: "Customers" },
+  { id: "customers", label: "Installation Schedule", shortLabel: "Schedule" },
   // Shown, right-aligned, only when the dashboard session belongs to an admin.
   { id: "admin", label: "Admin", shortLabel: "Admin" },
 ];
@@ -616,12 +651,9 @@ function liveStockOutRows(jobs: ScheduledJobPayload[]): StockTransaction[] {
     } else {
       lines.push({ category: "mounting", model: "Mounting structure", qty: null, serialised: false });
     }
-    const electricalItems = ofGroup("electrical");
-    if (electricalItems.length > 0) {
-      electricalItems.forEach((item) => lines.push({ category: "electrical", model: item.name, qty: null, serialised: false }));
-    } else {
-      lines.push({ category: "electrical", model: "Electrical accessories (cables, wiring, connectors, ballast)", qty: null, serialised: false });
-    }
+    // Electrical items as the invoice names them. When it names none, nothing stands in: the
+    // Electrical Item tab's list is filled in instead.
+    ofGroup("electrical").forEach((item) => lines.push({ category: "electrical", model: item.name, qty: null, serialised: false }));
     const first = lines[0];
     rows.push({
       id: `live-${job.jobId}`,
@@ -665,7 +697,7 @@ function Dashboard({
   // status tab and day. Kept here so Back from a verification page returns to that same list.
   const [homeTxType, setHomeTxType] = useState<HomeTxType>("all");
   const [homeTxCat, setHomeTxCat] = useState<string>("all");
-  const [homeTxStatusTab, setHomeTxStatusTab] = useState<"toVerify" | "verified">("toVerify");
+  const [homeTxStatusTab, setHomeTxStatusTab] = useState<TxStatusTab>("toVerify");
   const [homeDay, setHomeDay] = useState(() => isoToday());
   const [dashboardAdmin, setDashboardAdmin] = useState(false);
   // Admin: every page. Staff: every page except Admin. A phone number that is not
@@ -684,7 +716,7 @@ function Dashboard({
     };
   }, []);
   // Set when a home card is clicked: which Stock Details tab and warehouse to open on.
-  const [stockFocus, setStockFocus] = useState<{ item: StockItemTab; wh: "all" | "JB" | "KL" } | null>(null);
+  const [stockFocus, setStockFocus] = useState<{ item: StockItemTab; wh: WhFilter } | null>(null);
   const [inverterOpen, setInverterOpen] = useState(false);
   const [inverterType, setInverterType] = useState<InverterTypeId | null>(null);
   const [inspectTxId, setInspectTxId] = useState<string | null>(null);
@@ -765,6 +797,10 @@ function Dashboard({
         <TransactionInspectionPage
           tx={activeTx}
           onRecord={(material) => void recordVerification(activeTx.reference, material)}
+          loaded={verifications.some((r) => r.jobRef === activeTx.reference && r.material === "loaded")}
+          preparedBy={Object.fromEntries(
+            verifications.filter((r) => r.jobRef === activeTx.reference).map((r) => [r.material, r.by]),
+          )}
           onBack={() => setInspectTxId(null)}
           onUpdateStatus={(newStatus, remark) => {
             setTransactions((prev) =>
@@ -965,9 +1001,15 @@ function Dashboard({
           transactions={transactions}
           onInspectTx={(id) => setInspectTxId(id)}
           onSignOut={onSignOut}
-          onBack={() => setTab("home")}
+          onBack={() => {
+            // Back to the Stock Transfer list the form was opened from.
+            setHomeTxType("transfer");
+            setHomeShowsTx(true);
+            setTab("home");
+          }}
           onNewTransfer={(newTx) => setTransactions((prev) => [newTx, ...prev])}
           onGoToTransactions={() => {
+            setHomeTxType("transfer");
             setHomeShowsTx(true);
             setTab("home");
           }}
@@ -975,6 +1017,7 @@ function Dashboard({
       )}
       {tab === "stock" && <StockDetailsTab
           transactions={transactions}
+          verifications={verifications}
           initialItem={stockFocus?.item}
           initialWarehouse={stockFocus?.wh}
         />}
@@ -1004,7 +1047,14 @@ function catClass(cat: string): string {
   return styles.tag;
 }
 
-const WH_SPLIT: Record<string, { JB: number; KL: number }> = {
+// Warehouse filter buttons on every page: All, JB, KL and Kluang (code KLG). Kluang has no
+// stock counts yet, so it shows "—" / 0 until real figures are added.
+type WarehouseCode = "JB" | "KL" | "KLG";
+type WhFilter = "all" | WarehouseCode;
+const WH_FILTERS: WhFilter[] = ["all", "JB", "KL", "KLG"];
+const WH_BUTTON_LABEL: Record<WhFilter, string> = { all: "All", JB: "JB", KL: "KL", KLG: "Kluang" };
+
+const WH_SPLIT: Record<string, { JB: number; KL: number; KLG?: number }> = {
   inverter: { JB: 245, KL: 197 },
   panel: { JB: 450, KL: 320 },
   battery: { JB: 95, KL: 48 },
@@ -1049,7 +1099,7 @@ function txDate(tx: StockTransaction): string | null {
 }
 
 // "2026-11-12" -> "12 Nov 2026"; any other text (e.g. "Today, 10:30 AM") is shown as written.
-function txInWarehouse(tx: StockTransaction, wh: "all" | "JB" | "KL"): boolean {
+function txInWarehouse(tx: StockTransaction, wh: WhFilter): boolean {
   if (wh === "all") return true;
   if (tx.type === "transfer" && tx.transfer) {
     return tx.transfer.fromWarehouse === wh || tx.transfer.toWarehouse === wh || tx.warehouse === wh;
@@ -1457,8 +1507,8 @@ function StockInVerificationPage({
     <section className={styles.screen} aria-labelledby="stockin-verify-title">
       {/* Top Navigation */}
       <div className={styles.inspectTopBar}>
-        <button className={styles.btnActionGhost} type="button" onClick={onBack}>
-          &larr; Back to Transactions
+        <button className={styles.back} type="button" onClick={onBack} style={{ marginBottom: 0 }}>
+          Back
         </button>
         <span
           className={
@@ -2813,9 +2863,14 @@ function StockOutVerificationPage({
   onBack,
   onUpdateStatus,
   onRecord,
+  loaded,
+  preparedBy,
 }: {
   tx: StockTransaction;
   onRecord: (material: VerificationMaterial) => void;
+  loaded: boolean;
+  // Who completed each item of this job (material -> name), shown under its table.
+  preparedBy: Record<string, string>;
   onBack: () => void;
   onUpdateStatus: (newStatus: StockTransactionStatus, remark?: string) => void;
 }) {
@@ -2912,6 +2967,36 @@ function StockOutVerificationPage({
   });
   const [partQty, setPartQty] = useState<Record<string, string>>({});
   const [mountGroup, setMountGroup] = useState("Rail");
+  // Mounting tabs: Rail, and one tab for Hook & Bracket together with Clamp. Each is packed
+  // separately and records its own "Packed by" (material).
+  const mountTabs = [
+    { key: "Rail", label: "Rail", groups: ["Rail"], material: "mounting_rail" as const },
+    { key: "Hook & Bracket", label: "Hook, Bracket & Clamp", groups: ["Hook & Bracket", "Clamp"], material: "mounting_hook" as const },
+  ];
+  const mountTabGroups = mountTabs.find((t) => t.key === mountGroup)?.groups ?? [mountGroup];
+  const mountTabMaterial = mountTabs.find((t) => t.key === mountGroup)?.material;
+  // Part names of each mounting tab, across both systems (MIBET, WINSTAR).
+  const mountTabParts = (groups: string[]) =>
+    new Set(
+      MOUNTING_SYSTEMS.flatMap((system) => system.groups.filter((group) => groups.includes(group.label))).flatMap((group) =>
+        group.parts.map((part) => part.name),
+      ),
+    );
+  // Record who packed each mounting tab, once, when a quantity is first entered there.
+  const recordedMountTabs = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (tx.status === "Verified") return;
+    mountTabs.forEach((mt) => {
+      if (recordedMountTabs.current.has(mt.material) || preparedBy[mt.material]) return;
+      const parts = mountTabParts(mt.groups);
+      const entered = Object.entries(partQty).some(([name, value]) => parts.has(name) && value.trim() !== "");
+      if (entered) {
+        recordedMountTabs.current.add(mt.material);
+        onRecord(mt.material);
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [partQty, tx.status]);
   // PV drawings the user ticked to appear on the report (by link), saved per job.
   const [pvPicked, setPvPicked] = useState<Record<string, string>>({});
   const [elecGroup, setElecGroup] = useState(ELECTRICAL_GROUPS[0].label);
@@ -2930,10 +3015,18 @@ function StockOutVerificationPage({
     [mountSystem, mountRoof, mountOrientation, panelCount, mountRows],
   );
   const hasMountingParts = Object.values(partQty).some((value) => value.trim() !== "");
-  const hasElectricalParts = Object.values(elecQty).some((value) => value.trim() !== "");
+  // Electrical items and special materials share one quantity list; tell them apart by name.
+  const hasElectricalParts = Object.entries(elecQty).some(
+    ([name, value]) => !COMMERCIAL_PART_NAMES.has(name) && value.trim() !== "",
+  );
+  const hasCommercialParts = Object.entries(elecQty).some(
+    ([name, value]) => COMMERCIAL_PART_NAMES.has(name) && value.trim() !== "",
+  );
   // A group that is filled in from its parts list counts as done without the per-invoice lines.
   const listFilled = (category: string) =>
-    (category === "mounting" && hasMountingParts) || (category === "electrical" && hasElectricalParts);
+    (category === "mounting" && hasMountingParts) ||
+    (category === "electrical" && hasElectricalParts) ||
+    (category === "commercial" && hasCommercialParts);
 
   const [barcodeInput, setBarcodeInput] = useState("");
   const [cameraActive, setCameraActive] = useState(false);
@@ -2952,7 +3045,6 @@ function StockOutVerificationPage({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reportOpen, jobSourceId]);
   const [sldOpen, setSldOpen] = useState(false);
-  const [driverName, setDriverName] = useState("");
   const [vehiclePlate, setVehiclePlate] = useState("");
   const [lorryPhoto, setLorryPhoto] = useState<string | null>(null);
   const [checklist, setChecklist] = useState({
@@ -3158,6 +3250,9 @@ function StockOutVerificationPage({
           listFilled(id)
             ? true
             : bulkLines.every((line, i) => line.category !== id || (bulkQty[i] ?? "").trim() !== "");
+      } else {
+        // Special Material has no invoice lines: done once its list is filled in.
+        done = listFilled(id);
       }
       if (done) {
         recordedMaterials.current.add(id);
@@ -3265,6 +3360,26 @@ function StockOutVerificationPage({
                     <strong style={{ color: "#000000", fontWeight: 400 }}>{schedule?.inverterModel ?? "—"}</strong>
                   </div>
                   <div style={{ display: "contents" }}>
+                    <span style={{ color: "#000000", fontWeight: 700 }}>No of Panel (Pcs)</span>
+                    <span style={{ color: "#000000", fontWeight: 700 }}>:</span>
+                    <strong style={{ color: "#000000", fontWeight: 400 }}>{schedule?.noOfPanel ? `${schedule.noOfPanel} pcs` : "—"}</strong>
+                  </div>
+                  <div style={{ display: "contents" }}>
+                    <span style={{ color: "#000000", fontWeight: 700 }}>Panel Brand</span>
+                    <span style={{ color: "#000000", fontWeight: 700 }}>:</span>
+                    <strong style={{ color: "#000000", fontWeight: 400 }}>{schedule?.panelBrand || "—"}</strong>
+                  </div>
+                  <div style={{ display: "contents" }}>
+                    <span style={{ color: "#000000", fontWeight: 700 }}>Panel Power (W)</span>
+                    <span style={{ color: "#000000", fontWeight: 700 }}>:</span>
+                    <strong style={{ color: "#000000", fontWeight: 400 }}>{schedule?.panelPowerWatts ? `${schedule.panelPowerWatts}W` : "—"}</strong>
+                  </div>
+                  <div style={{ display: "contents" }}>
+                    <span style={{ color: "#000000", fontWeight: 700 }}>Inverter Brand</span>
+                    <span style={{ color: "#000000", fontWeight: 700 }}>:</span>
+                    <strong style={{ color: "#000000", fontWeight: 400 }}>{schedule?.inverterBrand || "—"}</strong>
+                  </div>
+                  <div style={{ display: "contents" }}>
                     <span style={{ color: "#000000", fontWeight: 700 }}>Scheduled Date</span>
                     <span style={{ color: "#000000", fontWeight: 700 }}>:</span>
                     <strong style={{ color: "#000000", fontWeight: 400 }}>{schedule?.scheduledDate ?? tx.time}</strong>
@@ -3274,126 +3389,6 @@ function StockOutVerificationPage({
             </div>
           </div>
 
-        {!forReport && (
-          <>
-          {/* ATAP Details */}
-          <h3 style={{ margin: "0 0 8px", fontSize: "14px", fontWeight: 700, color: "#000000" }}>ATAP Details</h3>
-
-          {/* Technical Scheduling System Specification (wraps to fit, no sideways scroll) */}
-          <div style={{ fontSize: "13px", color: "#000000", display: "grid", gridTemplateColumns: "max-content max-content 1fr", columnGap: "6px", rowGap: "4px", alignItems: "baseline" }}>
-            <div style={{ display: "contents" }}>
-              <span style={{ color: "#000000", fontWeight: 700 }}>System Size (kWp)</span>
-              <span style={{ color: "#000000", fontWeight: 700 }}>:</span>
-              <div>
-                    <span>
-                      {schedule?.systemSizeKwp ?? (tx.category === "panel" ? `${((tx.qty * 620) / 1000).toFixed(2)}` : "8.68")} kWp
-                    </span>
-                
-              </div>
-            </div>
-            <div style={{ display: "contents" }}>
-              <span style={{ color: "#000000", fontWeight: 700 }}>DC/AC Ratio</span>
-              <span style={{ color: "#000000", fontWeight: 700 }}>:</span>
-              <div>
-                    {schedule?.dcAcRatio ?? "1.24"}
-                
-              </div>
-            </div>
-            <div style={{ display: "contents" }}>
-              <span style={{ color: "#000000", fontWeight: 700 }}>System Price</span>
-              <span style={{ color: "#000000", fontWeight: 700 }}>:</span>
-              <div>
-                    {schedule?.systemPrice ?? "RM 26,900.00"}
-                
-              </div>
-            </div>
-            <div style={{ display: "contents" }}>
-              <span style={{ color: "#000000", fontWeight: 700 }}>Panel Brand</span>
-              <span style={{ color: "#000000", fontWeight: 700 }}>:</span>
-              <div>
-                    {schedule?.panelBrand ?? (tx.model.includes("Astronergy") ? "Astronergy" : "Jinko Solar")}
-                
-              </div>
-            </div>
-            <div style={{ display: "contents" }}>
-              <span style={{ color: "#000000", fontWeight: 700 }}>No of Panel (Pcs)</span>
-              <span style={{ color: "#000000", fontWeight: 700 }}>:</span>
-              <div>
-                    {schedule?.noOfPanel ?? (tx.category === "panel" ? tx.qty : 14)} pcs
-                
-              </div>
-            </div>
-            <div style={{ display: "contents" }}>
-              <span style={{ color: "#000000", fontWeight: 700 }}>Panel Power (W)</span>
-              <span style={{ color: "#000000", fontWeight: 700 }}>:</span>
-              <div>
-                    {schedule?.panelPowerWatts ? `${schedule.panelPowerWatts}W` : schedule?.live ? "—" : (tx.model.includes("625") ? "625W" : tx.model.includes("650") ? "650W" : "620W")}
-                
-              </div>
-            </div>
-            <div style={{ display: "contents" }}>
-              <span style={{ color: "#000000", fontWeight: 700 }}>Inverter Brand</span>
-              <span style={{ color: "#000000", fontWeight: 700 }}>:</span>
-              <div>
-                    {schedule?.inverterBrand ?? (tx.model.includes("Fox") || tx.model.includes("B3") ? "FoxESS" : tx.model.includes("Deye") || tx.model.includes("M2") ? "Deye" : "SAJ Electric")}
-                
-              </div>
-            </div>
-            <div style={{ display: "contents" }}>
-              <span style={{ color: "#000000", fontWeight: 700 }}>Inverter No</span>
-              <span style={{ color: "#000000", fontWeight: 700 }}>:</span>
-              <div>
-                    {schedule?.inverterNo ?? "1"}
-                
-              </div>
-            </div>
-            <div style={{ display: "contents" }}>
-              <span style={{ color: "#000000", fontWeight: 700 }}>Inverter Size</span>
-              <span style={{ color: "#000000", fontWeight: 700 }}>:</span>
-              <div>
-                    {schedule?.inverterSize ?? (tx.category === "inverter" ? tx.model : "7.0 kW")}
-                
-              </div>
-            </div>
-            <div style={{ display: "contents" }}>
-              <span style={{ color: "#000000", fontWeight: 700 }}>Total Inverter Power</span>
-              <span style={{ color: "#000000", fontWeight: 700 }}>:</span>
-              <div>
-                    {schedule?.totalInverterPower ?? (tx.category === "inverter" ? (tx.model.includes("7") ? "7.0 kW" : tx.model.includes("8") ? "8.0 kW" : "7.0 kW") : "7.0 kW")}
-                
-              </div>
-            </div>
-            <div style={{ display: "contents" }}>
-              <span style={{ color: "#000000", fontWeight: 700 }}>Payment</span>
-              <span style={{ color: "#000000", fontWeight: 700 }}>:</span>
-              <div>
-                    <span className={styles.greenText}>
-                      {schedule?.payment ?? "100% Paid"}
-                    </span>
-                
-              </div>
-            </div>
-            <div style={{ display: "contents" }}>
-              <span style={{ color: "#000000", fontWeight: 700 }}>SEDA Status</span>
-              <span style={{ color: "#000000", fontWeight: 700 }}>:</span>
-              <div>
-                    <span className={styles.greenText}>
-                      ✓ {schedule?.sedaStatus ?? "Approved"}
-                    </span>
-                
-              </div>
-            </div>
-            <div style={{ display: "contents" }}>
-              <span style={{ color: "#000000", fontWeight: 700 }}>Insurance Applied Date</span>
-              <span style={{ color: "#000000", fontWeight: 700 }}>:</span>
-              <div>
-                    {schedule?.insuranceAppliedDate ?? "08 Oct 2026"}
-                
-              </div>
-            </div>
-          </div>
-          </>
-        )}
 
         </div>
   );
@@ -3402,8 +3397,8 @@ function StockOutVerificationPage({
     <section className={`${styles.screen} ${styles.soPage}`} aria-labelledby="stockout-verify-title">
       {/* Top Navigation */}
       <div className={styles.inspectTopBar}>
-        <button className={styles.btnActionGhost} type="button" onClick={onBack}>
-          &larr; Back
+        <button className={styles.back} type="button" onClick={onBack} style={{ marginBottom: 0 }}>
+          Back
         </button>
         <div style={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" }}>
           <button
@@ -3652,6 +3647,10 @@ function StockOutVerificationPage({
             </tbody>
           </table>
         </div>
+        {/* Who prepared this item: saved when all its units were scanned */}
+        <p style={{ textAlign: "right", margin: "28px 0 0", fontSize: "13px", color: "var(--green)", fontWeight: 700 }}>
+          Prepared by: <strong>{preparedBy[tab] || "—"}</strong>
+        </p>
 
           </>
         )}
@@ -3732,16 +3731,16 @@ function StockOutVerificationPage({
                 </p>
                 </div>
                 <div className={styles.txFilterPills} role="tablist" aria-label="Mounting group" style={{ marginBottom: "10px" }}>
-                  {(MOUNTING_SYSTEMS.find((system) => system.id === mountSystem)?.groups ?? []).map((group) => (
+                  {mountTabs.map((mt) => (
                     <button
-                      key={group.label}
+                      key={mt.key}
                       type="button"
                       role="tab"
-                      aria-selected={mountGroup === group.label}
-                      className={`${styles.txPill} ${mountGroup === group.label ? styles.txPillActive : ""}`}
-                      onClick={() => setMountGroup(group.label)}
+                      aria-selected={mountGroup === mt.key}
+                      className={`${styles.txPill} ${mountGroup === mt.key ? styles.txPillActive : ""}`}
+                      onClick={() => setMountGroup(mt.key)}
                     >
-                      {group.label}
+                      {mt.label}
                     </button>
                   ))}
                 </div>
@@ -3755,9 +3754,17 @@ function StockOutVerificationPage({
                     </thead>
                     <tbody>
                       {(MOUNTING_SYSTEMS.find((system) => system.id === mountSystem)?.groups ?? [])
-                        .filter((group) => group.label === mountGroup)
+                        .filter((group) => mountTabGroups.includes(group.label))
                         .map((group) => (
                         <Fragment key={group.label}>
+                          {/* Combined tab: a heading row for each group (Hook & Bracket, Clamp) */}
+                          {mountTabGroups.length > 1 && (
+                            <tr>
+                              <th scope="colgroup" colSpan={2} style={{ textAlign: "left" }}>
+                                {group.label}
+                              </th>
+                            </tr>
+                          )}
                           {group.parts.map((part) => (
                             <tr key={part.name}>
                               <td>{part.name}</td>
@@ -3796,11 +3803,12 @@ function StockOutVerificationPage({
                     </tbody>
                   </table>
                 </div>
-                {mountEstimate.notes.map((note) => (
-                  <p key={note} className={styles.itemDesc}>
-                    {note}
+                {/* Who packed this mounting tab (Rail, or Hook, Bracket & Clamp) */}
+                {mountTabMaterial && (
+                  <p style={{ textAlign: "right", margin: "28px 0 0", fontSize: "13px", color: "var(--green)", fontWeight: 700 }}>
+                    Packed by: <strong>{preparedBy[mountTabMaterial] || "—"}</strong>
                   </p>
-                ))}
+                )}
               </div>
             )}
             {tab === "electrical" && (
@@ -3852,6 +3860,10 @@ function StockOutVerificationPage({
                     </tbody>
                   </table>
                 </div>
+                {/* Who prepared the electrical items: saved when their quantities were entered */}
+                <p style={{ textAlign: "right", margin: "28px 0 0", fontSize: "13px", color: "var(--green)", fontWeight: 700 }}>
+                  Prepared by: <strong>{preparedBy.electrical || "—"}</strong>
+                </p>
               </div>
             )}
             {tab === "commercial" && (
@@ -3903,9 +3915,13 @@ function StockOutVerificationPage({
                     </tbody>
                   </table>
                 </div>
+                {/* Who prepared the special materials: saved when their quantities were entered */}
+                <p style={{ textAlign: "right", margin: "28px 0 0", fontSize: "13px", color: "var(--green)", fontWeight: 700 }}>
+                  Prepared by: <strong>{preparedBy.commercial || "—"}</strong>
+                </p>
               </div>
             )}
-            {tab !== "mounting" && tab !== "commercial" && bulkLines.filter((line) => line.category === tab).length === 0 && (
+            {tab !== "mounting" && tab !== "commercial" && tab !== "electrical" && bulkLines.filter((line) => line.category === tab).length === 0 && (
               <p className={styles.note}>Nothing in this group on the invoice.</p>
             )}
             <div className={styles.inspectChecklist}>
@@ -3935,18 +3951,6 @@ function StockOutVerificationPage({
       {/* Transport & Driver Details */}
       <div className={styles.inspectCard} style={{ marginTop: "16px", marginBottom: "16px" }}>
         <div className={styles.bankingAmountGrid} style={{ marginBottom: "0" }}>
-          <div className={styles.bankingFieldGroup}>
-            <label className={styles.bankingFieldLabel}>Driver &amp; Logistics Team:</label>
-            <input
-              type="text"
-              className={`${styles.scannerInput} ${styles.transferField}`}
-              style={{ height: "52px", fontSize: "16px", width: "100%", minWidth: 0 }}
-              value={driverName}
-              onChange={(e) => setDriverName(e.target.value)}
-              placeholder="Driver Name / Transport Team..."
-            />
-          </div>
-
           <div className={styles.bankingFieldGroup}>
             <label className={styles.bankingFieldLabel}>Lorry / Transport Plate Number:</label>
             <input
@@ -4016,6 +4020,22 @@ function StockOutVerificationPage({
             {isAllVerified
               ? "✓ Verified (Ready for Installation Dispatch)"
               : `🔒 Verified (${stillToDo} more to scan or enter)`}
+          </button>
+          {/* Loading: the verified job's items are moved to the customer's house. It moves the
+              job from the Verified tab to the Loading tab, saved with who pressed it. */}
+          <button
+            className={`${styles.btnActionPrimary} ${
+              tx.status === "Verified" && !loaded ? styles.btnVerifiedGlow : styles.btnVerifiedLocked
+            }`}
+            type="button"
+            disabled={tx.status !== "Verified" || loaded}
+            onClick={() => {
+              onRecord("loaded");
+              onBack();
+            }}
+            title="Items already moved to the customer's house"
+          >
+            {loaded ? "🚚 Loaded (at customer's house)" : tx.status === "Verified" ? "🚚 Loading (moved to customer's house)" : "🔒 Loading (verify first)"}
           </button>
         </div>
       </div>
@@ -4111,9 +4131,13 @@ function StockOutVerificationPage({
             onClick={(e) => e.stopPropagation()}
           >
             <div className={styles.transferReportHead}>
-              <button type="button" className={styles.btnActionGhost} style={{ marginLeft: "auto" }} onClick={() => setReportOpen(false)}>
-                Close
-              </button>
+              <div style={{ display: "flex", gap: "8px", marginLeft: "auto" }}>
+                {/* Stock Out Verification report: always one A4 page */}
+                <DownloadReportButton fileName={reportFileName("Dispatch-Report", schedule?.jobId ?? tx.reference)} onePage />
+                <button type="button" className={styles.btnActionGhost} onClick={() => setReportOpen(false)}>
+                  Close
+                </button>
+              </div>
             </div>
             {/* Logo on the left, "Report" on the right: same as the Stock Out report */}
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "40px", margin: "0 0 28px" }}>
@@ -4137,26 +4161,10 @@ function StockOutVerificationPage({
               {drawings && drawings.length > 0 && !drawings.some((item) => pvPicked[item.url] === "1") && (
                 <p className={styles.note}>No drawing selected. Open PV Drawing and tick the one to use.</p>
               )}
-              {drawings?.filter((item) => pvPicked[item.url] === "1").map((item) =>
-                item.url.toLowerCase().includes(".pdf") ? (
-                  <iframe
-                    key={item.url}
-                    title={item.label}
-                    src={item.url}
-                    referrerPolicy="no-referrer"
-                    style={{ width: "100%", height: "260px", border: "1px solid var(--line)", borderRadius: "8px", marginBottom: "10px" }}
-                  />
-                ) : (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    key={item.url}
-                    src={item.url}
-                    alt={item.label}
-                    referrerPolicy="no-referrer"
-                    style={{ display: "block", maxWidth: "55%", maxHeight: "260px", width: "auto", height: "auto", borderRadius: "8px", marginBottom: "10px" }}
-                  />
-                ),
-              )}
+              {/* Shown as a picture (PDF: its first page) so the downloaded report includes it */}
+              {drawings?.filter((item) => pvPicked[item.url] === "1").map((item) => (
+                <PvDrawingImage key={item.url} jobSourceId={jobSourceId} url={item.url} label={item.label} />
+              ))}
             </div>
             {/* Mounting structure items, as a table */}
             <div style={{ marginTop: "8px" }}>
@@ -4286,10 +4294,15 @@ function StockTransferVerificationPage({
   tx,
   onBack,
   onUpdateStatus,
+  onRecord,
+  loaded,
 }: {
   tx: StockTransaction;
   onBack: () => void;
   onUpdateStatus: (newStatus: StockTransactionStatus, remark?: string) => void;
+  // Loading: the transfer was moved to the other warehouse (Stock Transfer's Loading tab).
+  onRecord: (material: VerificationMaterial) => void;
+  loaded: boolean;
 }) {
   const transfer = tx.transfer;
 
@@ -4521,8 +4534,8 @@ function StockTransferVerificationPage({
     <section className={styles.screen} aria-labelledby="stocktransfer-verify-title">
       {/* Top Navigation */}
       <div className={styles.inspectTopBar}>
-        <button className={styles.btnActionGhost} type="button" onClick={onBack}>
-          &larr; Back to Transactions
+        <button className={styles.back} type="button" onClick={onBack} style={{ marginBottom: 0 }}>
+          Back
         </button>
         <button type="button" className={styles.btnActionGhost} onClick={() => setReportOpen(true)}>
           Report
@@ -4931,6 +4944,21 @@ function StockTransferVerificationPage({
               ? "✓ Verified (Ready for Inter-Warehouse Dispatch / Receiving)"
               : `🔒 Verified (Scan ${totalRequired - totalScanned} more to unlock)`}
           </button>
+          {/* Loading: the transfer is moved to the other warehouse; it moves to the Loading tab. */}
+          <button
+            className={`${styles.btnActionPrimary} ${
+              tx.status === "Verified" && !loaded ? styles.btnVerifiedGlow : styles.btnVerifiedLocked
+            }`}
+            type="button"
+            disabled={tx.status !== "Verified" || loaded}
+            onClick={() => {
+              onRecord("loaded");
+              onBack();
+            }}
+            title="Transfer already moved to the other warehouse"
+          >
+            {loaded ? "🚚 Loaded (at the other warehouse)" : tx.status === "Verified" ? "🚚 Loading (moved to the other warehouse)" : "🔒 Loading (verify first)"}
+          </button>
         </div>
       </div>
 
@@ -4946,9 +4974,12 @@ function StockTransferVerificationPage({
           >
             <div className={styles.transferReportHead}>
               <h2 className={styles.bankingCardTitle}>Transfer Report</h2>
-              <button type="button" className={styles.btnActionGhost} onClick={() => setReportOpen(false)}>
-                Close
-              </button>
+              <div style={{ display: "flex", gap: "8px" }}>
+                <DownloadReportButton fileName={reportFileName("Transfer-Report", transfer?.transferNo ?? tx.reference)} />
+                <button type="button" className={styles.btnActionGhost} onClick={() => setReportOpen(false)}>
+                  Close
+                </button>
+              </div>
             </div>
             <div className={styles.bankingReceiptDetails}>
               <div className={styles.bankingReceiptRow}>
@@ -5214,9 +5245,14 @@ function TransactionInspectionPage({
   onBack,
   onUpdateStatus,
   onRecord,
+  loaded = false,
+  preparedBy = {},
 }: {
   tx: StockTransaction;
   onRecord: (material: VerificationMaterial) => void;
+  loaded?: boolean;
+  // Who completed each item of this job (material -> name), for "Prepared by".
+  preparedBy?: Record<string, string>;
   onBack: () => void;
   onUpdateStatus: (newStatus: StockTransactionStatus, remark?: string) => void;
 }) {
@@ -5239,6 +5275,8 @@ function TransactionInspectionPage({
         onBack={onBack}
         onUpdateStatus={onUpdateStatus}
         onRecord={onRecord}
+        loaded={loaded}
+        preparedBy={preparedBy}
       />
     );
   }
@@ -5250,6 +5288,8 @@ function TransactionInspectionPage({
         tx={tx}
         onBack={onBack}
         onUpdateStatus={onUpdateStatus}
+        onRecord={onRecord}
+        loaded={loaded}
       />
     );
   }
@@ -5265,8 +5305,8 @@ function TransactionInspectionPage({
   return (
     <section className={styles.screen} aria-labelledby="tx-inspection-title">
       <div className={styles.inspectTopBar}>
-        <button className={styles.btnActionGhost} type="button" onClick={onBack}>
-          &larr; Back to Transactions
+        <button className={styles.back} type="button" onClick={onBack} style={{ marginBottom: 0 }}>
+          Back
         </button>
         <span
           className={
@@ -5622,7 +5662,7 @@ function StockBalanceCards({
   tooltip,
   activeItem,
 }: {
-  whFilter: "all" | "JB" | "KL";
+  whFilter: WhFilter;
   onCardClick: (item: StockItemTab) => void;
   tooltip: (label: string) => string;
   activeItem?: StockItemTab;
@@ -5648,7 +5688,7 @@ function StockBalanceCards({
               <div className={styles.balanceCardHeader}>
                 <span className={styles.typeName}>{card.label}</span>
                 <span className={`${styles.tag} ${styles.check}`}>
-                  {whFilter === "all" ? "JB & KL" : `${whFilter} WH`}
+                  {whFilter === "all" ? "All WH" : `${WH_BUTTON_LABEL[whFilter]} WH`}
                 </span>
               </div>
               <div className={styles.onHandMain}>
@@ -5659,10 +5699,11 @@ function StockBalanceCards({
                 <div className={styles.onHandSplit}>
                   <span><strong>JB:</strong> {WH_SPLIT[card.id]?.JB ?? "—"}</span>
                   <span><strong>KL:</strong> {WH_SPLIT[card.id]?.KL ?? "—"}</span>
+                  <span><strong>Kluang:</strong> {WH_SPLIT[card.id]?.KLG ?? "—"}</span>
                 </div>
               ) : (
                 <div className={styles.onHandSplit}>
-                  <span>{whFilter === "JB" ? "JB Warehouse" : "KL Warehouse"}</span>
+                  <span>{WH_BUTTON_LABEL[whFilter]} Warehouse</span>
                 </div>
               )}
             </div>
@@ -5700,8 +5741,8 @@ function HomeTab({
   setTxType: Dispatch<SetStateAction<HomeTxType>>;
   txCat: string;
   setTxCat: Dispatch<SetStateAction<string>>;
-  txStatusTab: "toVerify" | "verified";
-  setTxStatusTab: Dispatch<SetStateAction<"toVerify" | "verified">>;
+  txStatusTab: TxStatusTab;
+  setTxStatusTab: Dispatch<SetStateAction<TxStatusTab>>;
   selectedDay: string;
   setSelectedDay: Dispatch<SetStateAction<string>>;
   peak?: number;
@@ -5710,11 +5751,11 @@ function HomeTab({
   showTx: boolean;
   onShowTx: (show: boolean) => void;
   onOpenTransfer: () => void;
-  onOpenStock: (item: StockItemTab, wh: "all" | "JB" | "KL") => void;
+  onOpenStock: (item: StockItemTab, wh: WhFilter) => void;
   canUpload: boolean;
   verifications: VerificationRecord[];
 }) {
-  const [whFilter, setWhFilter] = useState<"all" | "JB" | "KL">("all");
+  const [whFilter, setWhFilter] = useState<WhFilter>("all");
   const [txSearch, setTxSearch] = useState("");
   const [prepReportOpen, setPrepReportOpen] = useState(false);
   const doFiles = useDoFiles(showTx && txType === "in");
@@ -5795,11 +5836,29 @@ function HomeTab({
         })
       : [];
   // A PO moves to Verified once all its units are scanned and Verified was pressed.
-  const shownPoRows = poRows.filter((file) => (txStatusTab === "verified" ? !!file.verifiedAt : !file.verifiedAt));
-  const toVerifyCount = baseTx.filter((t) => !isVerifiedTx(t.status)).length + poRows.filter((file) => !file.verifiedAt).length;
-  const verifiedCount = baseTx.length + poRows.length - toVerifyCount;
+  const shownPoRows = poRows.filter((file) => (txStatusTab !== "toVerify" ? !!file.verifiedAt : !file.verifiedAt));
+  // Stock Out: a verified job marked Loaded (moved to the customer's house) leaves Verified for
+  // the Loading tab. Other views keep it under Verified.
+  const loadedJobs = new Set(verifications.filter((r) => r.material === "loaded").map((r) => r.jobRef));
+  // Stock Transfer: Verified and Loading only (a transfer is verified when it is made); a
+  // transfer marked Loading has been moved to the other warehouse.
+  const isTransferList = txType === "transfer";
+  const showLoading = txType === "out" || isTransferList;
+  const isLoadedTx = (t: StockTransaction) =>
+    showLoading && (t.type === "out" ? isVerifiedTx(t.status) : t.type === "transfer") && loadedJobs.has(t.reference);
+  const toVerifyCount = isTransferList
+    ? 0
+    : baseTx.filter((t) => !isVerifiedTx(t.status)).length + poRows.filter((file) => !file.verifiedAt).length;
+  const loadingCount = baseTx.filter(isLoadedTx).length;
+  const verifiedCount = baseTx.length + poRows.length - toVerifyCount - loadingCount;
+  const statusTab =
+    !showLoading && txStatusTab === "loading" ? "verified" : isTransferList && txStatusTab === "toVerify" ? "verified" : txStatusTab;
   const filteredTx = baseTx.filter((t) =>
-    txStatusTab === "verified" ? isVerifiedTx(t.status) : !isVerifiedTx(t.status)
+    statusTab === "loading"
+      ? isLoadedTx(t)
+      : statusTab === "verified"
+        ? (isTransferList || isVerifiedTx(t.status)) && !isLoadedTx(t)
+        : !isVerifiedTx(t.status),
   );
 
   // Warehouse-filtered transactions for weekly summary
@@ -5909,7 +5968,8 @@ function HomeTab({
         let jobs = 0;
         verifiedOut.forEach((t) => {
           const lines = txLines(t).filter((line) => line.category === def.id);
-          if (lines.length === 0) return;
+          // Every install needs electrical items, even when the invoice names none.
+          if (lines.length === 0 && def.id !== "electrical") return;
           jobs += 1;
           units += lines.reduce((sum, line) => sum + (line.qty ?? 0), 0);
         });
@@ -5994,6 +6054,18 @@ function HomeTab({
                 }
               />
             )}
+            {/* Stock Transfer: start a new transfer (opens Stock Transfer Verification), beside
+                Report like Upload PO on Stock In */}
+            {txType === "transfer" && (
+              <button
+                type="button"
+                className={styles.btnActionGhost}
+                style={{ background: "#bf9000", borderColor: "#bf9000", color: "#fff", fontWeight: 700 }}
+                onClick={onOpenTransfer}
+              >
+                + New Transfer
+              </button>
+            )}
             <button type="button" className={styles.btnActionGhost} onClick={() => setPrepReportOpen(true)}>
               Report
             </button>
@@ -6005,8 +6077,8 @@ function HomeTab({
         <>
       {/* Warehouse filter selector for Home */}
       {/* Same All / JB / KL buttons as Stock Details */}
-      <div className={styles.filterRow} style={{ width: "50%", minWidth: "170px" }}>
-        {(["all", "JB", "KL"] as const).map((value) => (
+      <div className={styles.filterRow} style={{ width: "66%", minWidth: "230px", marginLeft: "auto" }}>
+        {WH_FILTERS.map((value) => (
           <button
             key={value}
             type="button"
@@ -6014,7 +6086,7 @@ function HomeTab({
             style={{ fontSize: "11px", padding: "3px 4px" }}
             onClick={() => setWhFilter(value)}
           >
-            {value === "all" ? "All" : value}
+            {WH_BUTTON_LABEL[value]}
           </button>
         ))}
       </div>
@@ -6050,7 +6122,14 @@ function HomeTab({
               <span>Stock Out</span>
               <span className={styles.homeButtonCount}>{homeCount("out")}</span>
             </button>
-            <button type="button" className={styles.homeButton} onClick={onOpenTransfer}>
+            <button
+              type="button"
+              className={styles.homeButton}
+              onClick={() => {
+                setTxType("transfer");
+                onShowTx(true);
+              }}
+            >
               <span>Stock Transfer</span>
               <span className={styles.homeButtonCount}>{homeCount("transfer")}</span>
             </button>
@@ -6075,13 +6154,12 @@ function HomeTab({
             )}
             <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: "10px", marginBottom: "12px" }}>
         <h2 className={styles.sectionTitle} style={{ margin: 0, fontSize: "24px", fontWeight: 700, color: "#000" }}>
-          {txType === "in" ? "Stock In" : txType === "out" ? "Stock Out" : "Stock Transactions"}{txCat !== "all" ? ` · ${CAT_LABEL[txCat] === "Inv." ? "Inverter" : CAT_LABEL[txCat] === "Batt." ? "Battery" : CAT_LABEL[txCat] === "Mounting" ? "Mounting Structure" : CAT_LABEL[txCat] === "Electrical" ? "Electrical Item" : (CAT_LABEL[txCat] ?? txCat)}` : ""}
-          <span className={styles.sectionCount}>{verifiedCount}</span>
+          {txType === "in" ? "Stock In" : txType === "out" ? "Stock Out" : txType === "transfer" ? "Stock Transfer" : "Stock Transactions"}{txCat !== "all" ? ` · ${CAT_LABEL[txCat] === "Inv." ? "Inverter" : CAT_LABEL[txCat] === "Batt." ? "Battery" : CAT_LABEL[txCat] === "Mounting" ? "Mounting Structure" : CAT_LABEL[txCat] === "Electrical" ? "Electrical Item" : (CAT_LABEL[txCat] ?? txCat)}` : ""}
         </h2>
             </div>
             {/* Same All / JB / KL buttons as the Home page */}
-            <div className={styles.filterRow} role="group" aria-label="Warehouse filter" style={{ width: "50%", minWidth: "170px" }}>
-              {(["all", "JB", "KL"] as const).map((wh) => (
+            <div className={styles.filterRow} role="group" aria-label="Warehouse filter" style={{ width: "66%", minWidth: "230px", marginLeft: "auto" }}>
+              {WH_FILTERS.map((wh) => (
                 <button
                   key={wh}
                   type="button"
@@ -6089,14 +6167,29 @@ function HomeTab({
                   style={{ fontSize: "11px", padding: "3px 4px" }}
                   onClick={() => setWhFilter(wh)}
                 >
-                  {wh === "all" ? "All" : wh}
+                  {WH_BUTTON_LABEL[wh]}
                 </button>
               ))}
             </div>
             {/* In / Out KPI summary chips for This Week with Inverter, Panel, Battery Breakdown */}
             <div className={styles.txSummaryRow} style={{ marginBottom: "24px" }}>
-              {/* Today In: not shown on the Stock Out screen */}
-              {txType !== "out" && (
+              {/* Stock Transfer: the day's verified transfers */}
+              {txType === "transfer" && (
+                <div className={styles.txKpiCard}>
+                  <div className={styles.txKpiHeader}>
+                    <div className={styles.txKpiTitles}>
+                      <span className={styles.txKpiLabel}>{isToday ? "Today Transfer" : "Day Transfer"}</span>
+                      <small className={styles.txKpiSub}>Inter-WH rebalance</small>
+                    </div>
+                    <span className={`${styles.txKpiValue} ${styles.txQtyTransfer}`}>
+                      {whTx.filter((t) => t.type === "transfer" && t.status === "Verified").reduce((sum, t) => sum + t.qty, 0)}{" "}
+                      <span className={styles.txKpiUnit}>units</span>
+                    </span>
+                  </div>
+                </div>
+              )}
+              {/* Today In: not shown on the Stock Out or Stock Transfer screen */}
+              {txType !== "out" && txType !== "transfer" && (
                 <div className={styles.txKpiCard}>
                   <div className={styles.txKpiHeader}>
                     <div className={styles.txKpiTitles}>
@@ -6112,8 +6205,8 @@ function HomeTab({
                 </div>
               )}
 
-              {/* Today Out: not shown on the Stock In screen */}
-              {txType !== "in" && (
+              {/* Today Out: not shown on the Stock In or Stock Transfer screen */}
+              {txType !== "in" && txType !== "transfer" && (
                 <div className={styles.txKpiCard}>
                   <div className={styles.txKpiHeader}>
                     <div className={styles.txKpiTitles}>
@@ -6132,74 +6225,58 @@ function HomeTab({
 
             <div className={styles.balanceHeaderRow}>
               <div>
-                <p className={styles.kicker} style={{ margin: "2px 0 0" }}>
-                  Day: {dayLabel}
+                <p className={styles.kicker} style={{ margin: "2px 0 0", color: "#000" }}>
+                  {dayLabel}
                 </p>
               </div>
-              <div className={styles.txWeekNav}>
-                <button
-                  type="button"
-                  className={`${styles.btnActionGhost} ${styles.txNavBtn}`}
-                  onClick={() => setSelectedDay((d) => shiftIso(d, -1))}
-                  aria-label="Previous day"
-                >
-                  &lsaquo; Previous
-                </button>
-                <div className={styles.txWeekBadge}>
-                  <span className={styles.txWeekDot} />
-                  <span>Day: {dayLabel}</span>
-                </div>
-                <input
-                  type="date"
-                  className={`${styles.scannerInput} ${styles.transferField}`}
-                  style={{ width: "auto", minWidth: 0, flex: "none" }}
-                  value={selectedDay}
-                  onChange={(e) => {
-                    if (e.target.value) setSelectedDay(e.target.value);
-                  }}
-                  aria-label="Pick a day"
-                />
-                <button
-                  type="button"
-                  className={`${styles.btnActionGhost} ${styles.txNavBtn}`}
-                  onClick={() => setSelectedDay((d) => shiftIso(d, 1))}
-                  aria-label="Next day"
-                >
-                  Next &rsaquo;
-                </button>
-                {!isToday && (
-                  <button
-                    type="button"
-                    className={styles.btnActionGhost}
-                    onClick={() => setSelectedDay(isoToday())}
-                  >
-                    Today
-                  </button>
-                )}
-              </div>
+              {/* ‹ calendar › : previous day, pick a day, next day */}
+              <DateNav
+                value={selectedDay}
+                onPick={setSelectedDay}
+                onPrev={() => setSelectedDay((d) => shiftIso(d, -1))}
+                onNext={() => setSelectedDay((d) => shiftIso(d, 1))}
+              />
             </div>
 
             {/* Status tabs + search on one row */}
             <div className={styles.txTabsSearchRow}>
             <div className={styles.txFilterPills} role="tablist" aria-label="Transaction status">
+              {!isTransferList && (
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={txStatusTab === "toVerify"}
+                  className={`${styles.txPill} ${txStatusTab === "toVerify" ? styles.txPillActive : ""}`}
+                  onClick={() => setTxStatusTab("toVerify")}
+                >
+                  To Verify ({toVerifyCount})
+                </button>
+              )}
               <button
                 type="button"
                 role="tab"
-                aria-selected={txStatusTab === "toVerify"}
-                className={`${styles.txPill} ${txStatusTab === "toVerify" ? styles.txPillActive : ""}`}
-                onClick={() => setTxStatusTab("toVerify")}
-              >
-                To Verify ({toVerifyCount})
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={txStatusTab === "verified"}
-                className={`${styles.txPill} ${txStatusTab === "verified" ? styles.txPillActive : ""}`}
+                aria-selected={statusTab === "verified"}
+                className={`${styles.txPill} ${statusTab === "verified" ? styles.txPillActive : ""}`}
                 onClick={() => setTxStatusTab("verified")}
               >
                 Verified ({verifiedCount})
               </button>
+              {showLoading && (
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={statusTab === "loading"}
+                  className={`${styles.txPill} ${statusTab === "loading" ? styles.txPillActive : ""}`}
+                  onClick={() => setTxStatusTab("loading")}
+                  title={
+                    isTransferList
+                      ? "Transfers already moved to the other warehouse"
+                      : "Verified jobs whose items are already moved to the customer's house"
+                  }
+                >
+                  Loading ({loadingCount})
+                </button>
+              )}
             </div>
 
               <input
@@ -6220,12 +6297,12 @@ function HomeTab({
                 <table className={`${styles.detailTable} ${styles.txLedger} ${txType === "out" ? styles.txLedgerOut : ""} ${txType === "in" ? styles.txLedgerIn : ""}`}>
                   <thead>
                     <tr>
-                      <th scope="col">{txType === "in" ? "PO Number" : "Customer Name"}</th>
+                      <th scope="col">{txType === "in" ? "PO Number" : txType === "transfer" ? "Transfer No." : "Customer Name"}</th>
                       {txType === "in" && <th scope="col">Item Type</th>}
                       <th scope="col">{txType === "in" ? "Item Code" : "Model / Serial"}</th>
                       <th scope="col" className={styles.num}>Qty</th>
                       {txType === "all" && <th scope="col">Type</th>}
-                      <th scope="col">{txType === "in" ? "Date" : "Installation Date"}</th>
+                      <th scope="col">{txType === "in" || txType === "transfer" ? "Date" : "Installation Date"}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -6331,8 +6408,19 @@ function HomeTab({
                         }
                       >
                         <td className={styles.txRefCell}>
-                          <span className={styles.txCustName}>{tx.party}</span>
-                          <span className={`${styles.txParty} ${styles.txInvoiceNo}`}>{tx.reference}</span>
+                          {tx.type === "transfer" ? (
+                            <>
+                              <span className={styles.txCustName}>{tx.transfer?.transferNo ?? tx.reference}</span>
+                              <span className={`${styles.txParty} ${styles.txInvoiceNo}`}>
+                                {tx.transfer ? `${tx.transfer.fromWarehouse} → ${tx.transfer.toWarehouse}` : tx.party}
+                              </span>
+                            </>
+                          ) : (
+                            <>
+                              <span className={styles.txCustName}>{tx.party}</span>
+                              <span className={`${styles.txParty} ${styles.txInvoiceNo}`}>{tx.reference}</span>
+                            </>
+                          )}
                           {tx.status === "Inspected" && tx.issueRemark && (
                             <div className={styles.issueRemarkTag}>
                               ⚠️ {tx.issueRemark}
@@ -6450,6 +6538,7 @@ function HomeTab({
                 >
                   Print
                 </button>
+                <DownloadReportButton fileName={reportFileName("Warehouse-Preparation-Record", selectedDay)} />
                 <button type="button" className={styles.btnActionGhost} onClick={() => setPrepReportOpen(false)}>
                   Close
                 </button>
@@ -6854,7 +6943,7 @@ function StockTransferTab({
       <div className={styles.head}>
         <div>
           <h1 id="stock-transfer-title" className={styles.sectionTitle} style={{ margin: "0 0 4px", fontSize: "24px", fontWeight: 700, color: "#000" }}>
-            Stock Transfer
+            Stock Transfer Verification
           </h1>
         </div>
       </div>
@@ -7283,9 +7372,12 @@ function StockTransferTab({
           >
             <div className={styles.transferReportHead}>
               <h2 className={styles.bankingCardTitle}>Transfer Report</h2>
-              <button type="button" className={styles.btnActionGhost} onClick={() => setReportOpen(false)}>
-                Close
-              </button>
+              <div style={{ display: "flex", gap: "8px" }}>
+                <DownloadReportButton fileName={reportFileName("Transfer-Report", `${fromWh}-to-${toWh}`)} />
+                <button type="button" className={styles.btnActionGhost} onClick={() => setReportOpen(false)}>
+                  Close
+                </button>
+              </div>
             </div>
             <div className={styles.bankingReceiptDetails}>
               <div className={styles.bankingReceiptRow}>
@@ -7405,7 +7497,7 @@ function StockTransferTab({
                   if (onGoToTransactions) onGoToTransactions();
                 }}
               >
-                📋 View in Stock Transactions ➔
+                📋 View in Stock Transfer ➔
               </button>
             </div>
           </div>
@@ -7421,16 +7513,22 @@ function StockTransferTab({
 
 function StockDetailsTab({
   transactions,
+  verifications,
   initialItem,
   initialWarehouse,
 }: {
   transactions: StockTransaction[];
+  verifications: VerificationRecord[];
   initialItem?: StockItemTab;
-  initialWarehouse?: "all" | "JB" | "KL";
+  initialWarehouse?: WhFilter;
 }) {
-  const [whFilter, setWhFilter] = useState<"all" | "JB" | "KL">(initialWarehouse ?? "all");
+  const [whFilter, setWhFilter] = useState<WhFilter>(initialWarehouse ?? "all");
   const [query, setQuery] = useState("");
   const [stockTab, setStockTab] = useState<StockItemTab>(initialItem ?? "panel");
+  // The day whose stock in (▲) and stock out (▼) the Panel / Inverter / Battery tables show.
+  const [selectedDay, setSelectedDay] = useState(isoToday());
+  const dayLabel = getDayLabel(selectedDay);
+  const [reportOpen, setReportOpen] = useState(false);
 
   const filteredItems =
     whFilter === "all"
@@ -7442,16 +7540,24 @@ function StockDetailsTab({
   const batteries = filteredItems.filter((item) => item.category === "battery");
   const others = filteredItems.filter((item) => item.category === "other");
 
-  const tableWarehouses: Array<"JB" | "KL"> = whFilter === "all" ? ["JB", "KL"] : [whFilter];
+  const tableWarehouses: WarehouseCode[] = whFilter === "all" ? ["JB", "KL", "KLG"] : [whFilter];
 
   return (
     <section className={styles.screen} aria-labelledby="warehouse-stock-details">
-      <h1 id="warehouse-stock-details">Stock Details</h1>
-      <p className={styles.kicker}>Current inventory across JB and KL warehouses.</p>
+      {/* Title on the left, Report on the right (same as the other pages) */}
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "10px" }}>
+        <div style={{ minWidth: 0 }}>
+          <h1 id="warehouse-stock-details">Stock Details</h1>
+          <p className={styles.kicker}>Current inventory across JB, KL and Kluang warehouses.</p>
+        </div>
+        <button type="button" className={styles.btnActionGhost} style={{ flex: "none" }} onClick={() => setReportOpen(true)}>
+          Report
+        </button>
+      </div>
 
       {/* Warehouse filter: same size as the Home page buttons */}
-      <div className={styles.filterRow} style={{ width: "50%", minWidth: "170px" }}>
-        {(["all", "JB", "KL"] as const).map((value) => (
+      <div className={styles.filterRow} style={{ width: "66%", minWidth: "230px", marginLeft: "auto" }}>
+        {WH_FILTERS.map((value) => (
           <button
             key={value}
             type="button"
@@ -7459,7 +7565,7 @@ function StockDetailsTab({
             style={{ fontSize: "11px", padding: "3px 4px" }}
             onClick={() => setWhFilter(value)}
           >
-            {value === "all" ? "All" : value}
+            {WH_BUTTON_LABEL[value]}
           </button>
         ))}
       </div>
@@ -7471,6 +7577,23 @@ function StockDetailsTab({
         activeItem={stockTab}
         tooltip={(label) => `Show ${label} below`}
       />
+
+      {/* Day picker, same as Home: the day's stock in / out in the tables below. A row of
+          space separates it from the cards. */}
+      <div className={styles.balanceHeaderRow} style={{ marginTop: "28px" }}>
+        <div>
+          <p className={styles.kicker} style={{ margin: "2px 0 0", color: "#000" }}>
+            {dayLabel}
+          </p>
+        </div>
+        {/* ‹ calendar › : previous day, pick a day, next day */}
+        <DateNav
+          value={selectedDay}
+          onPick={setSelectedDay}
+          onPrev={() => setSelectedDay((d) => shiftIso(d, -1))}
+          onNext={() => setSelectedDay((d) => shiftIso(d, 1))}
+        />
+      </div>
 
       {/* Detail tables, all filtered by the one search box */}
       <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "flex-end", gap: "10px", marginTop: "18px", marginBottom: "12px" }}>
@@ -7486,13 +7609,13 @@ function StockDetailsTab({
       </div>
 
       {stockTab === "panel" && (
-        <StockOutModelTable title="Panel" category="panel" transactions={transactions} query={query} />
+        <StockOutModelTable title="Panel" category="panel" transactions={transactions} verifications={verifications} query={query} day={selectedDay} />
       )}
       {stockTab === "inverter" && (
-        <StockOutModelTable title="Inverter" category="inverter" transactions={transactions} query={query} />
+        <StockOutModelTable title="Inverter" category="inverter" transactions={transactions} verifications={verifications} query={query} day={selectedDay} />
       )}
       {stockTab === "battery" && (
-        <StockOutModelTable title="Battery" category="battery" transactions={transactions} query={query} />
+        <StockOutModelTable title="Battery" category="battery" transactions={transactions} verifications={verifications} query={query} day={selectedDay} />
       )}
       {stockTab === "other" && (
         <StockTable
@@ -7504,13 +7627,209 @@ function StockDetailsTab({
       )}
       {stockTab === "mounting" && <MountingStructureSection warehouses={tableWarehouses} />}
       {stockTab === "special" && <SpecialMaterialSection warehouses={tableWarehouses} />}
+
+      {reportOpen && (
+        <StockDetailsReport
+          transactions={transactions}
+          verifications={verifications}
+          whFilter={whFilter}
+          day={selectedDay}
+          onClose={() => setReportOpen(false)}
+        />
+      )}
     </section>
+  );
+}
+
+// Stock Details report: the picked day and warehouse on one A4 page. Stock on hand (the cards),
+// each Panel / Inverter / Battery model that moved that day (in, out, balance) and the day's
+// stock out by customer with who prepared it. Downloads as a one-page PDF.
+function StockDetailsReport({
+  transactions,
+  verifications,
+  whFilter,
+  day,
+  onClose,
+}: {
+  transactions: StockTransaction[];
+  verifications: VerificationRecord[];
+  whFilter: WhFilter;
+  day: string;
+  onClose: () => void;
+}) {
+  const categories = [
+    { id: "panel", title: "Panel" },
+    { id: "inverter", title: "Inverter" },
+    { id: "battery", title: "Battery" },
+  ] as const;
+  const sections = categories.map((cat) => ({
+    ...cat,
+    rows: buildModelRows(transactions, verifications, cat.id, day).filter((row) => row.inQty > 0 || row.qty > 0),
+  }));
+  // Stock out by customer: one line per customer and model.
+  const outLines = sections.flatMap((section) =>
+    section.rows.flatMap((row) =>
+      row.uses
+        .filter((use) => use.kind === "out")
+        .map((use) => ({
+          customer: use.party || "—",
+          item: section.title,
+          model: row.model,
+          serials: use.serials.join(", ") || "—",
+          qty: use.qty,
+          preparedBy: use.preparedBy || "—",
+        })),
+    ),
+  );
+  outLines.sort((a, b) => a.customer.localeCompare(b.customer));
+  const balances = WAREHOUSE_BALANCES[whFilter];
+  const whName = whFilter === "all" ? "All warehouses (JB, KL, Kluang)" : `${WH_BUTTON_LABEL[whFilter]} Warehouse`;
+  const cell = { border: "1px solid #999", padding: "4px 6px", textAlign: "left" as const, fontSize: "11px", color: "#000" };
+  const num = { ...cell, textAlign: "right" as const, whiteSpace: "nowrap" as const };
+  const head = { ...cell, background: "#f3f4f6", fontWeight: 700 };
+  const headNum = { ...head, textAlign: "right" as const };
+  const sectionTitle = { fontSize: "13px", fontWeight: 700, margin: "16px 0 6px", color: "#000" };
+  const table = { width: "100%", borderCollapse: "collapse" as const, tableLayout: "auto" as const };
+
+  return (
+    <div className={styles.bankingReceiptBackdrop} onClick={onClose}>
+      <div
+        className={`${styles.transferReportCard} ${styles.a4Report}`}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Stock Details report"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className={styles.transferReportHead}>
+          <div style={{ display: "flex", gap: "8px", marginLeft: "auto" }}>
+            <DownloadReportButton
+              fileName={reportFileName("Stock-Details-Report", whFilter === "all" ? "All" : WH_BUTTON_LABEL[whFilter], day)}
+              onePage
+            />
+            <button type="button" className={styles.btnActionGhost} onClick={onClose}>
+              Close
+            </button>
+          </div>
+        </div>
+        {/* Logo on the left, "Report" on the right: same as the other reports */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "40px", margin: "0 0 20px" }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={`${typeof window !== "undefined" ? window.location.origin : ""}${LOGO_SRC}`}
+            alt="Eternalgy"
+            width={1332}
+            height={176}
+            style={{ display: "block", height: "24px", width: "auto", flex: "none" }}
+          />
+          <span style={{ fontSize: "20px", fontWeight: 700, color: "#000" }}>Report</span>
+        </div>
+        <h2 style={{ fontSize: "18px", fontWeight: 700, textAlign: "center", margin: "0 0 14px", color: "#000" }}>
+          Stock Details &middot; {getDayLabel(day)}
+        </h2>
+        <p style={{ margin: "0 0 4px", fontSize: "12px", color: "#000" }}>
+          <strong>Warehouse:</strong> {whName}
+        </p>
+
+        <h3 style={sectionTitle}>1. Stock on hand</h3>
+        <table style={table}>
+          <thead>
+            <tr>
+              <th style={head}>Item</th>
+              <th style={headNum}>On hand</th>
+            </tr>
+          </thead>
+          <tbody>
+            {balances.map((card) => (
+              <tr key={card.id}>
+                <td style={cell}>{card.label}</td>
+                <td style={num}>{card.onHand ?? "—"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        <h3 style={sectionTitle}>2. Stock in and out</h3>
+        {sections.map((section) => {
+          const totalIn = section.rows.reduce((sum, row) => sum + row.inQty, 0);
+          const totalOut = section.rows.reduce((sum, row) => sum + row.qty, 0);
+          return (
+            <div key={section.id} style={{ marginBottom: "10px" }}>
+              <p style={{ margin: "0 0 4px", fontSize: "12px", fontWeight: 700, color: "#000" }}>{section.title}</p>
+              {section.rows.length === 0 ? (
+                <p style={{ margin: 0, fontSize: "11px", color: "#555" }}>No stock in or out on this day.</p>
+              ) : (
+                <table style={table}>
+                  <thead>
+                    <tr>
+                      <th style={head}>Type</th>
+                      <th style={head}>Model</th>
+                      <th style={headNum}>In</th>
+                      <th style={headNum}>Out</th>
+                      <th style={headNum}>Balance</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {section.rows.map((row) => (
+                      <tr key={row.model}>
+                        <td style={cell}>{row.type}</td>
+                        <td style={cell}>{row.model}</td>
+                        <td style={num}>{row.inQty}</td>
+                        <td style={num}>{row.qty}</td>
+                        <td style={num}>{row.inQty - row.qty}</td>
+                      </tr>
+                    ))}
+                    <tr>
+                      <td style={{ ...cell, fontWeight: 700 }} colSpan={2}>
+                        Total
+                      </td>
+                      <td style={{ ...num, fontWeight: 700 }}>{totalIn}</td>
+                      <td style={{ ...num, fontWeight: 700 }}>{totalOut}</td>
+                      <td style={{ ...num, fontWeight: 700 }}>{totalIn - totalOut}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              )}
+            </div>
+          );
+        })}
+
+        <h3 style={sectionTitle}>3. Stock out by customer</h3>
+        {outLines.length === 0 ? (
+          <p style={{ margin: 0, fontSize: "11px", color: "#555" }}>No stock out on this day.</p>
+        ) : (
+          <table style={table}>
+            <thead>
+              <tr>
+                <th style={head}>Customer</th>
+                <th style={head}>Item</th>
+                <th style={head}>Model</th>
+                <th style={head}>Serial Code / Number</th>
+                <th style={headNum}>Qty</th>
+                <th style={head}>Prepared by</th>
+              </tr>
+            </thead>
+            <tbody>
+              {outLines.map((line, index) => (
+                <tr key={`${line.customer}-${line.model}-${index}`}>
+                  <td style={cell}>{line.customer}</td>
+                  <td style={cell}>{line.item}</td>
+                  <td style={cell}>{line.model}</td>
+                  <td style={{ ...cell, fontFamily: "monospace" }}>{line.serials}</td>
+                  <td style={num}>{line.qty}</td>
+                  <td style={cell}>{line.preparedBy}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </div>
   );
 }
 
 // Special materials for commercial jobs (the stock out "Special Material" list). No stock
 // counts are loaded for them yet, so every quantity shows as —.
-function SpecialMaterialSection({ warehouses }: { warehouses: Array<"JB" | "KL"> }) {
+function SpecialMaterialSection({ warehouses }: { warehouses: WarehouseCode[] }) {
   return (
     <>
       <h2 className={styles.sectionTitle}>Special Material</h2>
@@ -7524,7 +7843,7 @@ function SpecialMaterialSection({ warehouses }: { warehouses: Array<"JB" | "KL">
               <th scope="col">Item</th>
               {warehouses.map((wh) => (
                 <th key={wh} scope="col" className={styles.num}>
-                  {wh}
+                  {WH_BUTTON_LABEL[wh]}
                 </th>
               ))}
             </tr>
@@ -7556,7 +7875,7 @@ function SpecialMaterialSection({ warehouses }: { warehouses: Array<"JB" | "KL">
   );
 }
 
-function MountingStructureSection({ warehouses }: { warehouses: Array<"JB" | "KL"> }) {
+function MountingStructureSection({ warehouses }: { warehouses: WarehouseCode[] }) {
   const show = (value: number | null) => (value === null ? "—" : value);
   return (
     <>
@@ -7574,7 +7893,7 @@ function MountingStructureSection({ warehouses }: { warehouses: Array<"JB" | "KL
                   <th scope="col">Part</th>
                   {warehouses.map((wh) => (
                     <th key={wh} scope="col" className={styles.num}>
-                      {wh}
+                      {WH_BUTTON_LABEL[wh]}
                     </th>
                   ))}
                 </tr>
@@ -7592,7 +7911,7 @@ function MountingStructureSection({ warehouses }: { warehouses: Array<"JB" | "KL
                         <td>{part.name}</td>
                         {warehouses.map((wh) => (
                           <td key={wh} className={styles.num}>
-                            {show(wh === "JB" ? part.jb : part.kl)}
+                            {show(wh === "JB" ? part.jb : wh === "KL" ? part.kl : null)}
                           </td>
                         ))}
                       </tr>
@@ -7613,7 +7932,7 @@ type StockTableRow = {
   model: string;
   serialCode: string;
   highlight: boolean;
-  qty: Record<"JB" | "KL", number>;
+  qty: Record<WarehouseCode, number>;
 };
 
 // One row per model, with each warehouse's count in its own column side by side.
@@ -7626,7 +7945,7 @@ function groupByModel(items: StockDetailItem[]): StockTableRow[] {
       model: item.model,
       serialCode: item.serialCode,
       highlight: false,
-      qty: { JB: 0, KL: 0 },
+      qty: { JB: 0, KL: 0, KLG: 0 },
     };
     row.qty[item.warehouse] += item.qty;
     row.highlight ||= Boolean(item.highlight);
@@ -7649,67 +7968,104 @@ function modelTypeOf(category: "panel" | "inverter" | "battery", model: string):
   return "—";
 }
 
+// One customer (stock out) or supplier (stock in) of a model on the picked day.
+type ModelUse = { txId: string; kind: "in" | "out"; party: string; serials: string[]; qty: number; preparedBy: string };
+
+// Panel / Inverter / Battery models with that day's stock in (▲), stock out (▼) and who each
+// unit is for. Used by the Stock Details tables and the Stock Details report.
+type ModelRow = { model: string; type: string; qty: number; inQty: number; jobs: number; uses: ModelUse[] };
+function buildModelRows(
+  transactions: StockTransaction[],
+  verifications: VerificationRecord[],
+  category: "panel" | "inverter" | "battery",
+  day: string,
+): ModelRow[] {
+  type Entry = { qty: number; inQty: number; jobs: Set<string>; type: string; uses: ModelUse[] };
+  const byModel = new Map<string, Entry>();
+  // Inverters: every model on the staff list is shown, with 0 when nothing needs it.
+  if (category === "panel") {
+    PANEL_MODELS.forEach((code) => byModel.set(code, { qty: 0, inQty: 0, jobs: new Set<string>(), type: detectPanelBrand(code), uses: [] }));
+  }
+  if (category === "battery") {
+    BATTERY_MODELS.forEach((code) => byModel.set(code, { qty: 0, inQty: 0, jobs: new Set<string>(), type: "—", uses: [] }));
+  }
+  if (category === "inverter") {
+    Object.values(INVERTER_MODELS).flat().forEach((code) =>
+      byModel.set(code, { qty: 0, inQty: 0, jobs: new Set<string>(), type: code.startsWith("M") ? "Micro" : code.startsWith("H") ? "Hybrid" : "String", uses: [] }),
+    );
+  }
+  transactions
+    // Stock out (▼) and stock in (▲) on the day picked above the table.
+    .filter((tx) => (tx.type === "out" || tx.type === "in") && txDate(tx) === day)
+    .forEach((tx) => {
+      txLines(tx)
+        .filter((line) => line.category === category)
+        .forEach((line) => {
+          // Inverters are listed by model code (R5-5K-S2), not the long invoice wording.
+          const key =
+            category === "inverter"
+              ? inverterModelCode(line.model)
+              : category === "battery"
+                ? (batteryModelCode(line.model) ?? "")
+                : category === "panel"
+                  ? (panelModelCode(line.model) ?? "")
+                  : line.model;
+          // Panels: only the models on the staff model list.
+          if (category === "panel" && !key) return;
+          // Batteries: only the models on the staff model list.
+          if (category === "battery" && !key) return;
+          // Inverters: only the models on the staff model list; anything else is left out.
+          if (category === "inverter" && !Object.values(INVERTER_MODELS).some((list) => list.includes(key))) return;
+          const entry = byModel.get(key) ?? { qty: 0, inQty: 0, jobs: new Set<string>(), type: modelTypeOf(category, line.model), uses: [] };
+          // Who it is for (stock out: the customer) or from (stock in), shown when the row is clicked.
+          const kind = tx.type === "in" ? "in" : "out";
+          const same = entry.uses.find((use) => use.txId === tx.id && use.kind === kind);
+          const serial = line.serialCode || tx.serialCode;
+          if (same) {
+            same.qty += line.qty ?? 0;
+            if (serial && !same.serials.includes(serial)) same.serials.push(serial);
+          } else {
+            // Prepared by: who completed this item for the job, else who verified the whole job.
+            const preparedBy =
+              kind === "out"
+                ? verifications.find((r) => r.jobRef === tx.reference && r.material === category)?.by ||
+                  verifications.find((r) => r.jobRef === tx.reference && r.material === "job")?.by ||
+                  ""
+                : "";
+            entry.uses.push({ txId: tx.id, kind, party: tx.party, serials: serial ? [serial] : [], qty: line.qty ?? 0, preparedBy });
+          }
+          if (tx.type === "in") {
+            entry.inQty += line.qty ?? 0;
+          } else {
+            entry.qty += line.qty ?? 0;
+            entry.jobs.add(tx.id);
+          }
+          byModel.set(key, entry);
+        });
+    });
+  return Array.from(byModel.entries())
+    .map(([model, entry]) => ({ model, type: entry.type, qty: entry.qty, inQty: entry.inQty, jobs: entry.jobs.size, uses: entry.uses }))
+    .sort((a, b) => b.qty - a.qty); // stable: equal quantities keep the model-list order
+}
+
 function StockOutModelTable({
   title,
   category,
   transactions,
+  verifications,
   query,
+  day,
 }: {
   title: string;
   category: "panel" | "inverter" | "battery";
   transactions: StockTransaction[];
+  // Who completed each item on Stock Out Verification (the Prepared by column).
+  verifications: VerificationRecord[];
   query: string;
+  // Only this day's stock in / out (YYYY-MM-DD), picked on Stock Details.
+  day: string;
 }) {
-  const rows = useMemo(() => {
-    const byModel = new Map<string, { qty: number; inQty: number; jobs: Set<string>; type: string }>();
-    // Inverters: every model on the staff list is shown, with 0 when nothing needs it.
-    if (category === "panel") {
-      PANEL_MODELS.forEach((code) => byModel.set(code, { qty: 0, inQty: 0, jobs: new Set<string>(), type: detectPanelBrand(code) }));
-    }
-    if (category === "battery") {
-      BATTERY_MODELS.forEach((code) => byModel.set(code, { qty: 0, inQty: 0, jobs: new Set<string>(), type: "—" }));
-    }
-    if (category === "inverter") {
-      Object.values(INVERTER_MODELS).flat().forEach((code) =>
-        byModel.set(code, { qty: 0, inQty: 0, jobs: new Set<string>(), type: code.startsWith("M") ? "Micro" : code.startsWith("H") ? "Hybrid" : "String" }),
-      );
-    }
-    transactions
-      // Stock out (▼) and stock in (▲). Inverters: only the ones dated today.
-      .filter((tx) => (tx.type === "out" || tx.type === "in") && (category !== "inverter" || txDate(tx) === isoToday()))
-      .forEach((tx) => {
-        txLines(tx)
-          .filter((line) => line.category === category)
-          .forEach((line) => {
-            // Inverters are listed by model code (R5-5K-S2), not the long invoice wording.
-            const key =
-              category === "inverter"
-                ? inverterModelCode(line.model)
-                : category === "battery"
-                  ? (batteryModelCode(line.model) ?? "")
-                  : category === "panel"
-                    ? (panelModelCode(line.model) ?? "")
-                    : line.model;
-            // Panels: only the models on the staff model list.
-            if (category === "panel" && !key) return;
-            // Batteries: only the models on the staff model list.
-            if (category === "battery" && !key) return;
-            // Inverters: only the models on the staff model list; anything else is left out.
-            if (category === "inverter" && !Object.values(INVERTER_MODELS).some((list) => list.includes(key))) return;
-            const entry = byModel.get(key) ?? { qty: 0, inQty: 0, jobs: new Set<string>(), type: modelTypeOf(category, line.model) };
-            if (tx.type === "in") {
-              entry.inQty += line.qty ?? 0;
-            } else {
-              entry.qty += line.qty ?? 0;
-              entry.jobs.add(tx.id);
-            }
-            byModel.set(key, entry);
-          });
-      });
-    return Array.from(byModel.entries())
-      .map(([model, entry]) => ({ model, type: entry.type, qty: entry.qty, inQty: entry.inQty, jobs: entry.jobs.size }))
-      .sort((a, b) => b.qty - a.qty); // stable: equal quantities keep the model-list order
-  }, [transactions, category]);
+  const rows = useMemo(() => buildModelRows(transactions, verifications, category, day), [transactions, verifications, category, day]);
 
   // Inverters are split into String, Micro and Hybrid tabs.
   const [inverterType, setInverterType] = useState("String");
@@ -7720,6 +8076,9 @@ function StockOutModelTable({
   const shown = category === "inverter" ? matching.filter((row) => row.type === inverterType) : matching;
   const total = shown.reduce((sum, row) => sum + row.qty, 0);
   const totalIn = shown.reduce((sum, row) => sum + row.inQty, 0);
+  // The model whose customers are shown in a pop-up (tap a row to open it).
+  const [openModel, setOpenModel] = useState<string | null>(null);
+  const openRow = openModel ? rows.find((row) => row.model === openModel && row.uses.length > 0) ?? null : null;
 
   return (
     <div className={styles.tableWrap}>
@@ -7764,7 +8123,14 @@ function StockOutModelTable({
             </tr>
           ) : (
             shown.map((row) => (
-              <tr key={row.model}>
+              <tr
+                key={row.model}
+                // Only a model with customers on this day opens the pop-up.
+                className={row.uses.length > 0 ? styles.txRowClickable : undefined}
+                onClick={row.uses.length > 0 ? () => setOpenModel(row.model) : undefined}
+                title={row.uses.length > 0 ? "Show which customers" : undefined}
+                style={row.uses.length > 0 ? undefined : { cursor: "default" }}
+              >
                 <td>{row.type}</td>
                 <td>{row.model}</td>
                 <td className={styles.num}>{row.inQty}</td>
@@ -7793,6 +8159,77 @@ function StockOutModelTable({
           </tfoot>
         )}
       </table>
+
+      {/* Pop-up: which customers this model is for on the picked day */}
+      {openRow && (
+        <div className={styles.bankingReceiptBackdrop} onClick={() => setOpenModel(null)}>
+          <div
+            className={`${styles.transferReportCard} ${styles.modelUsesCard}`}
+            role="dialog"
+            aria-modal="true"
+            aria-label={`${openRow.model} customers`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className={styles.transferReportHead}>
+              <div>
+                <h2 className={styles.bankingCardTitle}>{openRow.model}</h2>
+                <p className={styles.kicker} style={{ margin: "2px 0 0" }}>
+                  {title} · {getDayLabel(day)}
+                </p>
+              </div>
+              <button type="button" className={styles.btnActionGhost} onClick={() => setOpenModel(null)}>
+                Close
+              </button>
+            </div>
+            {openRow.uses.length === 0 ? (
+              <p className={styles.note} style={{ margin: "8px 0 0" }}>No customers for {openRow.model} on this day.</p>
+            ) : (
+              <table className={styles.modelUsesTable}>
+                <thead>
+                  <tr>
+                    <th scope="col">Customer</th>
+                    <th scope="col">Serial Code / Number</th>
+                    <th scope="col" className={styles.num}>Qty</th>
+                    <th scope="col">Prepared by</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {openRow.uses.map((use) => (
+                    <tr key={`${use.txId}-${use.kind}`}>
+                      <td>{use.party || "—"}</td>
+                      <td className={styles.modelUsesSerial}>{use.serials.length ? use.serials.join(", ") : "—"}</td>
+                      <td className={styles.num}>
+                        <span
+                          aria-label={use.kind === "in" ? "stock in" : "stock out"}
+                          style={{ color: use.kind === "in" ? "var(--green)" : "var(--red)", marginRight: "4px" }}
+                        >
+                          {use.kind === "in" ? "▲" : "▼"}
+                        </span>
+                        {use.qty}
+                      </td>
+                      <td>{use.preparedBy || "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr>
+                    <td colSpan={2}>
+                      <strong>Total</strong>
+                    </td>
+                    <td className={styles.num}>
+                      <strong>
+                        {openRow.inQty > 0 && <span style={{ color: "var(--green)", marginRight: "6px" }}>▲{openRow.inQty}</span>}
+                        <span style={{ color: "var(--red)" }}>▼{openRow.qty}</span>
+                      </strong>
+                    </td>
+                    <td />
+                  </tr>
+                </tfoot>
+              </table>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -7805,7 +8242,7 @@ function StockTable({
 }: {
   title: string;
   items: StockDetailItem[];
-  warehouses: Array<"JB" | "KL">;
+  warehouses: WarehouseCode[];
   query: string;
 }) {
   const needle = query.trim().toLowerCase();
@@ -7816,7 +8253,7 @@ function StockTable({
       )
     : allRows;
   const rowTotal = (row: StockTableRow) => warehouses.reduce((sum, wh) => sum + row.qty[wh], 0);
-  const whTotal = (wh: "JB" | "KL") => rows.reduce((sum, row) => sum + row.qty[wh], 0);
+  const whTotal = (wh: WarehouseCode) => rows.reduce((sum, row) => sum + row.qty[wh], 0);
   const total = rows.reduce((sum, row) => sum + rowTotal(row), 0);
   const showTotal = warehouses.length > 1;
   const columns = 2 + warehouses.length + (showTotal ? 1 : 0);
@@ -7846,7 +8283,7 @@ function StockTable({
                 <th scope="col">Model</th>
                 <th scope="col">Code</th>
                 {warehouses.map((wh) => (
-                  <th key={wh} scope="col" className={styles.num}>{wh}</th>
+                  <th key={wh} scope="col" className={styles.num}>{WH_BUTTON_LABEL[wh]}</th>
                 ))}
                 {showTotal && <th scope="col" className={styles.num}>Total</th>}
               </tr>
@@ -7895,13 +8332,13 @@ function StockTable({
 }
 
 // ---------------------------------------------------------------------------
-// Tab 3 — Customer Details
+// Tab 3 — Installation Schedule
 // ---------------------------------------------------------------------------
 
 
 
 // ---------------------------------------------------------------------------
-// Customer Details: read-only copy of the dashboard's Arranged Installation
+// Installation Schedule: read-only copy of the dashboard's Arranged Installation
 // (only when signed in to the dashboard; otherwise the sample page below shows)
 // ---------------------------------------------------------------------------
 
@@ -8035,40 +8472,30 @@ function ArrangedInstallationView({ groups }: { groups: ArrangedGroupPayload[] }
     <section className={styles.screen} aria-labelledby="warehouse-arranged">
       <div className={styles.arrHeader}>
         <div>
-          <h1 id="warehouse-arranged">Customer Details</h1>
+          <h1 id="warehouse-arranged">Installation Schedule</h1>
           <p className={styles.kicker}>Details are from Project Team</p>
         </div>
         <div className={styles.arrNav}>
-          <button
-            type="button"
-            className={styles.btnActionGhost}
-            disabled={index <= 0}
-            onClick={() => setWeekIndex(index - 1)}
-          >
-            &lsaquo; Previous
-          </button>
-          <select
-            className={styles.bankingAccountSelect}
-            style={{ width: "auto" }}
-            value={index}
-            onChange={(e) => setWeekIndex(Number(e.target.value))}
-            aria-label="Week"
-          >
-            {weeks.map((w, i) => (
-              <option key={w} value={i}>
-                Week {arrWeekLabel(w)}
-                {i === weeks.length - 1 ? " (Latest)" : ""}
-              </option>
-            ))}
-          </select>
-          <button
-            type="button"
-            className={styles.btnActionGhost}
-            disabled={index >= weeks.length - 1}
-            onClick={() => setWeekIndex(index + 1)}
-          >
-            Next &rsaquo;
-          </button>
+          {/* ‹ calendar › : previous week, the week of a picked day, next week */}
+          <DateNav
+            value={weeks[index] ?? ""}
+            onPick={(day) => {
+              // The latest listed week that starts on or before the picked day.
+              const monday = arrMonday(day);
+              let pick = 0;
+              weeks.forEach((w, i) => {
+                if (w <= monday) pick = i;
+              });
+              setWeekIndex(pick);
+            }}
+            onPrev={() => setWeekIndex(index - 1)}
+            onNext={() => setWeekIndex(index + 1)}
+            prevDisabled={index <= 0}
+            nextDisabled={index >= weeks.length - 1}
+            prevLabel="Previous week"
+            nextLabel="Next week"
+            pickLabel={weeks[index] ? `Week ${arrWeekLabel(weeks[index])} · pick a day` : "Pick a day"}
+          />
         </div>
       </div>
 
@@ -8092,7 +8519,9 @@ function ArrangedInstallationView({ groups }: { groups: ArrangedGroupPayload[] }
         </p>
       )}
       {!query && sections[0].groups.length === 0 ? (
-        <p className={styles.note}>No arranged installation in this period.</p>
+        <p className={styles.note}>
+          No arranged installation in this period{weeks[index] ? ` (week ${arrWeekLabel(weeks[index])})` : ""}.
+        </p>
       ) : (
         sections.flatMap((section) => section.groups.map((group, gi) => (
           <div key={`${section.week}-${group.id}`} className={styles.arrGroup}>
@@ -8196,7 +8625,7 @@ function StockByCustomerTab() {
 
   return (
     <section className={styles.screen} aria-labelledby="warehouse-stock-customer">
-      <h1 id="warehouse-stock-customer">Customer Details</h1>
+      <h1 id="warehouse-stock-customer">Installation Schedule</h1>
       <p className={styles.note}>
         {loaded
           ? "No arranged installations to show. Sign in to the dashboard (same browser) to see them."

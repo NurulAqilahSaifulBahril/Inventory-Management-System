@@ -261,8 +261,8 @@ export default function PoVerificationPage({
   return (
     <section className={`${styles.screen} ${styles.soPage}`} aria-labelledby="po-verify-title">
       <div className={styles.inspectTopBar}>
-        <button className={styles.btnActionGhost} type="button" onClick={onBack}>
-          &larr; Back
+        <button className={styles.back} type="button" onClick={onBack} style={{ marginBottom: 0 }}>
+          Back
         </button>
         <button type="button" className={styles.btnActionGhost} onClick={() => setPoViewOpen(true)}>
           Open PO file

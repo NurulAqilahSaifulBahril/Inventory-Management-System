@@ -157,7 +157,14 @@ export function UploadDoButton({ busy, onFile }: { busy: boolean; onFile: (file:
   const input = useRef<HTMLInputElement>(null);
   return (
     <>
-      <button type="button" className={styles.btnActionGhost} disabled={busy} onClick={() => input.current?.click()}>
+      <button
+        type="button"
+        className={styles.btnActionGhost}
+        // Gold, same as + New Transfer on Stock Transfer.
+        style={{ background: "#bf9000", borderColor: "#bf9000", color: "#fff", fontWeight: 700 }}
+        disabled={busy}
+        onClick={() => input.current?.click()}
+      >
         {busy ? "Uploading…" : "Upload PO"}
       </button>
       <input

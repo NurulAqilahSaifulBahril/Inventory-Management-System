@@ -257,7 +257,7 @@ export type CategoryStockBalance = {
   toBuy: number;
 };
 
-export const WAREHOUSE_BALANCES: Record<"all" | "JB" | "KL", CategoryStockBalance[]> = {
+export const WAREHOUSE_BALANCES: Record<"all" | "JB" | "KL" | "KLG", CategoryStockBalance[]> = {
   all: [
     { id: "panel", label: "Panel", onHand: 770, toInstall: 620, available: 150, toBuy: 0 },
     { id: "inverter", label: "Inverter", onHand: 442, toInstall: 365, available: 77, toBuy: 48 },
@@ -283,6 +283,15 @@ export const WAREHOUSE_BALANCES: Record<"all" | "JB" | "KL", CategoryStockBalanc
     { id: "mounting", label: "Mounting Structure", onHand: null, toInstall: 0, available: 0, toBuy: 0 },
     { id: "electrical", label: "Electrical Item", onHand: null, toInstall: 0, available: 0, toBuy: 0 },
     // Commercial jobs' special materials (trunking, jointers, cable gland, metal DB box).
+    { id: "special", label: "Special Material", onHand: null, toInstall: 0, available: 0, toBuy: 0 },
+  ],
+  // Kluang warehouse: no stock counts yet ("—").
+  KLG: [
+    { id: "panel", label: "Panel", onHand: null, toInstall: 0, available: 0, toBuy: 0 },
+    { id: "inverter", label: "Inverter", onHand: null, toInstall: 0, available: 0, toBuy: 0 },
+    { id: "battery", label: "Battery", onHand: null, toInstall: 0, available: 0, toBuy: 0 },
+    { id: "mounting", label: "Mounting Structure", onHand: null, toInstall: 0, available: 0, toBuy: 0 },
+    { id: "electrical", label: "Electrical Item", onHand: null, toInstall: 0, available: 0, toBuy: 0 },
     { id: "special", label: "Special Material", onHand: null, toInstall: 0, available: 0, toBuy: 0 },
   ],
 };

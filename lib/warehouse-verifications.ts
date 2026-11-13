@@ -60,5 +60,19 @@ export function ensureAuditTable(): Promise<void> {
   return auditReady;
 }
 
-export const MATERIALS = ["job", "panel", "inverter", "battery", "mounting", "electrical"] as const;
+// "loaded": the verified job's items were loaded and moved to the customer's house (Stock Out's
+// Loading tab).
+// "mounting_rail" / "mounting_hook": who packed the Rail, and the Hook, Bracket & Clamp parts.
+export const MATERIALS = [
+  "job",
+  "panel",
+  "inverter",
+  "battery",
+  "mounting",
+  "mounting_rail",
+  "mounting_hook",
+  "electrical",
+  "commercial",
+  "loaded",
+] as const;
 export type Material = (typeof MATERIALS)[number];

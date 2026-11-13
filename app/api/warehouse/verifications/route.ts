@@ -71,8 +71,25 @@ const MATERIAL_LABEL: Record<string, string> = {
   inverter: "Inverter",
   battery: "Battery",
   mounting: "Mounting Structure",
+  mounting_rail: "Mounting Structure (Rail)",
+  mounting_hook: "Mounting Structure (Hook, Bracket & Clamp)",
   electrical: "Electrical Item",
+  commercial: "Special Material",
+  loaded: "Loading",
 };
+
+// Stock Transfer numbers look like "TR-2026-5169"; everything else is a Stock Out job.
+const isTransferRef = (ref: string) => /^TR-/i.test(ref);
+
+// Audit log action, entity type and summary for each kind of record.
+function auditEntry(material: string, jobRef: string): [string, string, string] {
+  if (material === "loaded" && isTransferRef(jobRef)) {
+    return ["stock_transfer_loaded", "stock_transfer", `Loaded Stock Transfer ${jobRef} to the other warehouse`];
+  }
+  if (material === "job") return ["stock_out_verified", "stock_out", `Verified Stock Out ${jobRef}`];
+  if (material === "loaded") return ["stock_out_loaded", "stock_out", `Loaded Stock Out ${jobRef} to the customer's house`];
+  return ["material_completed", "stock_out", `Completed ${MATERIAL_LABEL[material]} for Stock Out ${jobRef}`];
+}
 
 export async function POST(request: Request) {
   let user;
@@ -126,16 +143,7 @@ export async function POST(request: Request) {
           "insert into public.warehouse_audit_log (user_id, username, action, entity_type, entity_id, summary)",
           "values ($1, $2, $3, $4, $5, $6)",
         ].join(String.fromCharCode(10)),
-        [
-          userId,
-          name,
-          material === "job" ? "stock_out_verified" : "material_completed",
-          "stock_out",
-          jobRef,
-          material === "job"
-            ? `Verified Stock Out ${jobRef}`
-            : `Completed ${MATERIAL_LABEL[material]} for Stock Out ${jobRef}`,
-        ],
+        [userId, name, auditEntry(material, jobRef)[0], auditEntry(material, jobRef)[1], jobRef, auditEntry(material, jobRef)[2]],
       );
     }
     return NextResponse.json({ ok: true, by: name, recorded: inserted.length > 0 });
