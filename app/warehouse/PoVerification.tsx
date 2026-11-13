@@ -315,7 +315,7 @@ export default function PoVerificationPage({
               title={line.description}
             >
               <span className={styles.soCardLabel}>
-                {i + 1}. {line.itemCode}
+                {line.itemCode}
               </span>
               <strong className={styles.soCardNumber}>{line.qty.toLocaleString("en-MY")}</strong>
               <span className={styles.soCardSub}>{scannedPerLine[i].toLocaleString("en-MY")} scanned</span>

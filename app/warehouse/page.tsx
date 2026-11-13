@@ -6229,79 +6229,87 @@ function HomeTab({
                     </tr>
                   </thead>
                   <tbody>
-                    {shownPoRows.map((file) => (
-                      <tr
-                        key={`po-${file.id}`}
-                        className={styles.txRowClickable}
-                        tabIndex={0}
-                        title={file.verifiedAt ? "Verified — tap to view" : "To Verify — tap to scan the units received"}
-                        onClick={() => setOpenPoId(file.id)}
-                        onKeyDown={(e) => {
+                    {shownPoRows.map((file) => {
+                      // One table row per PO line, so each item code and its qty share a row (and
+                      // stay level however the description wraps). PO number, item type and date
+                      // span all of the PO's rows.
+                      const poLines = file.poLines?.length ? file.poLines : null;
+                      const span = poLines ? poLines.length : 1;
+                      const open = () => setOpenPoId(file.id);
+                      const rowProps = {
+                        className: styles.txRowClickable,
+                        tabIndex: 0,
+                        title: file.verifiedAt ? "Verified — tap to view" : "To Verify — tap to scan the units received",
+                        onClick: open,
+                        onKeyDown: (e: React.KeyboardEvent) => {
                           if (e.key === "Enter" || e.key === " ") {
                             e.preventDefault();
-                            setOpenPoId(file.id);
+                            open();
                           }
-                        }}
-                      >
-                        <td className={styles.txRefCell}>
-                          <span className={styles.txCustName}>{file.fileName}</span>
-                          <span className={`${styles.txParty} ${styles.txInvoiceNo}`}>
-                            {file.uploadedBy ? `uploaded by ${file.uploadedBy}` : ""}
-                          </span>
-                        </td>
+                        },
+                      };
+                      const codeCell = (line: { itemCode: string; description: string } | null) => (
                         <td>
-                          {canUpload ? (
-                            <select
-                              className={styles.poItemTypeSelect}
-                              value={file.itemType}
-                              aria-label={`Item type for ${file.fileName}`}
-                              onClick={(e) => e.stopPropagation()}
-                              onKeyDown={(e) => e.stopPropagation()}
-                              onChange={(e) => void doFiles.setItemType(file.id, e.target.value)}
-                            >
-                              {!file.itemType && <option value="">Choose…</option>}
-                              {PO_ITEM_TYPE_OPTIONS.map(([value, label]) => (
-                                <option key={value} value={value}>
-                                  {label}
-                                </option>
-                              ))}
-                            </select>
-                          ) : (
-                            itemTypeLabel(file.itemType)
-                          )}
-                        </td>
-                        <td>
-                          {file.poLines?.length ? (
-                            // Every line of the PO (even when two lines share an item code), each with
-                            // its description; its quantity sits on the same ruled line in the Qty column.
-                            file.poLines.map((line, n) => (
-                              <div key={n} className={styles.txItem}>
-                                <div>
-                                  <strong>{line.itemCode}</strong>
-                                  <span className={styles.txInvoiceNo} style={{ display: "block", color: "var(--muted)" }}>
-                                    {line.description}
-                                  </span>
-                                </div>
-                              </div>
-                            ))
+                          {line ? (
+                            <>
+                              <strong>{line.itemCode}</strong>
+                              <span className={styles.txInvoiceNo} style={{ display: "block", color: "var(--muted)" }}>
+                                {line.description}
+                              </span>
+                            </>
                           ) : (
                             <strong>Purchase Order (PO)</strong>
                           )}
                         </td>
-                        <td className={`${styles.num} ${styles.txQtyIn}`}>
-                          {file.poLines?.length
-                            ? file.poLines.map((line, n) => (
-                                <div key={n} className={`${styles.txItem} ${styles.txItemEnd}`}>
-                                  {line.qty.toLocaleString("en-MY")}
-                                </div>
-                              ))
-                            : "—"}
-                        </td>
-                        <td style={{ whiteSpace: "nowrap", fontSize: "12px", color: "#000" }}>
-                          {isoDateLabel(poDay(file))}
-                        </td>
-                      </tr>
-                    ))}
+                      );
+                      const qtyCell = (qty: number | null) => (
+                        <td className={`${styles.num} ${styles.txQtyIn}`}>{qty === null ? "—" : qty.toLocaleString("en-MY")}</td>
+                      );
+                      return (
+                        <Fragment key={`po-${file.id}`}>
+                          <tr {...rowProps}>
+                            <td className={styles.txRefCell} rowSpan={span}>
+                              <span className={styles.txCustName}>{file.fileName}</span>
+                              <span className={`${styles.txParty} ${styles.txInvoiceNo}`}>
+                                {file.uploadedBy ? `uploaded by ${file.uploadedBy}` : ""}
+                              </span>
+                            </td>
+                            <td rowSpan={span}>
+                              {canUpload ? (
+                                <select
+                                  className={styles.poItemTypeSelect}
+                                  value={file.itemType}
+                                  aria-label={`Item type for ${file.fileName}`}
+                                  onClick={(e) => e.stopPropagation()}
+                                  onKeyDown={(e) => e.stopPropagation()}
+                                  onChange={(e) => void doFiles.setItemType(file.id, e.target.value)}
+                                >
+                                  {!file.itemType && <option value="">Choose…</option>}
+                                  {PO_ITEM_TYPE_OPTIONS.map(([value, label]) => (
+                                    <option key={value} value={value}>
+                                      {label}
+                                    </option>
+                                  ))}
+                                </select>
+                              ) : (
+                                itemTypeLabel(file.itemType)
+                              )}
+                            </td>
+                            {codeCell(poLines ? poLines[0] : null)}
+                            {qtyCell(poLines ? poLines[0].qty : null)}
+                            <td className={styles.poDateCell} rowSpan={span} style={{ whiteSpace: "nowrap", fontSize: "12px", color: "#000" }}>
+                              {isoDateLabel(poDay(file))}
+                            </td>
+                          </tr>
+                          {(poLines ?? []).slice(1).map((line, n) => (
+                            <tr key={n} {...rowProps} className={`${styles.txRowClickable} ${styles.poLineRow}`}>
+                              {codeCell(line)}
+                              {qtyCell(line.qty)}
+                            </tr>
+                          ))}
+                        </Fragment>
+                      );
+                    })}
                     {filteredTx.map((tx) => (
                       <tr
                         key={tx.id}

@@ -6227,3 +6227,21 @@ button.typeCard {
     min-width: 64px;
   }
 }
+
+/* Stock In: a PO's lines are rows of their own (item code and qty level on each). The PO
+   number, item type and date cells span them; lines after the first get a lighter rule. */
+.txLedger tr.poLineRow td {
+  border-top: 0;
+}
+
+.txLedger td.poDateCell,
+.txLedger td[rowspan] {
+  vertical-align: middle;
+}
+
+@media (max-width: 639px) {
+  .txLedgerIn td.poDateCell {
+    white-space: normal !important;
+    min-width: 40px;
+  }
+}
