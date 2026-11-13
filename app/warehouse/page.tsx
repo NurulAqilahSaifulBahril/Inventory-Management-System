@@ -62,7 +62,8 @@ export default function WarehousePage() {
   const [view, setView] = useState<View>("mobile");
 
   useEffect(() => {
-    setSignedInPhone(window.sessionStorage.getItem(SESSION_KEY));
+    const storedPhone = window.sessionStorage.getItem(SESSION_KEY);
+    setSignedInPhone(storedPhone);
     setSignedInUsername(window.sessionStorage.getItem(NAME_KEY) ?? "");
     setSignedInAccess(window.sessionStorage.getItem(ACCESS_KEY) ?? "");
     // Phone or desktop layout follows the screen width, and updates when it changes
@@ -71,8 +72,40 @@ export default function WarehousePage() {
     const apply = () => setView(wide.matches ? "desktop" : "mobile");
     apply();
     wide.addEventListener("change", apply);
-    setReady(true);
-    return () => wide.removeEventListener("change", apply);
+
+    // The tab's own memory of the sign-in is lost with a new tab or a closed browser, but the
+    // 30-day sign-in cookie is not: ask the server, and if this browser is still signed in, go
+    // straight in. This also picks up a change of access (e.g. made admin) since signing in.
+    // The sign-in screen is held back (ready = false) only while a first-time check runs.
+    let cancelled = false;
+    if (storedPhone) setReady(true);
+    const timeout = setTimeout(() => {
+      if (!cancelled) setReady(true);
+    }, 4000);
+    fetch("/api/warehouse/me", { credentials: "same-origin", cache: "no-store" })
+      .then(async (res) => (res.ok ? ((await res.json()) as { signedIn?: boolean; username?: string; access?: string; phone?: string }) : null))
+      .then((me) => {
+        if (cancelled || !me?.signedIn) return;
+        const flag = storedPhone || me.phone || "signed-in";
+        const username = me.username ?? "";
+        const access = me.access ?? "";
+        window.sessionStorage.setItem(SESSION_KEY, flag);
+        window.sessionStorage.setItem(NAME_KEY, username);
+        window.sessionStorage.setItem(ACCESS_KEY, access);
+        setSignedInPhone(flag);
+        setSignedInUsername(username);
+        setSignedInAccess(access);
+      })
+      .catch(() => {})
+      .finally(() => {
+        clearTimeout(timeout);
+        if (!cancelled) setReady(true);
+      });
+    return () => {
+      cancelled = true;
+      clearTimeout(timeout);
+      wide.removeEventListener("change", apply);
+    };
   }, []);
 
   async function signIn(event: FormEvent) {
@@ -6184,7 +6217,7 @@ function HomeTab({
               <p className={styles.note}>No stock transactions match your filter criteria.</p>
             ) : (
               <div className={styles.tableWrap} ref={txTableRef}>
-                <table className={`${styles.detailTable} ${styles.txLedger} ${txType === "out" ? styles.txLedgerOut : ""}`}>
+                <table className={`${styles.detailTable} ${styles.txLedger} ${txType === "out" ? styles.txLedgerOut : ""} ${txType === "in" ? styles.txLedgerIn : ""}`}>
                   <thead>
                     <tr>
                       <th scope="col">{txType === "in" ? "PO Number" : "Customer Name"}</th>
@@ -6313,9 +6346,12 @@ function HomeTab({
                           ) : (
                             <strong>{tx.model}</strong>
                           )}
-                          <span className={`${styles.code} ${styles.serialUnder} ${styles.mobileOnly}`}>
-                            {tx.serialCode}
-                          </span>
+                          {/* Phone only; not on the Stock Out list (its "SN-INV-…" code is not a real serial) */}
+                          {txType !== "out" && (
+                            <span className={`${styles.code} ${styles.serialUnder} ${styles.mobileOnly}`}>
+                              {tx.serialCode}
+                            </span>
+                          )}
                         </td>
                         <td
                           className={`${styles.num} ${

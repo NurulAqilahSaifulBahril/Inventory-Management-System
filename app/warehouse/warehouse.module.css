@@ -6165,3 +6165,65 @@ button.typeCard {
 .lock .noticeTop {
   padding-right: 26px;
 }
+
+/* Phone: smaller text in the Stock In table (PO Number, Item Type, Item Code, Qty, Date).
+   The date cell sets 12px in the code and the dashboard forces bold cell text to 13px,
+   so a few sizes need !important / an explicit size. */
+@media (max-width: 639px) {
+  .txLedgerIn {
+    font-size: 10px;
+  }
+
+  .txLedgerIn thead th {
+    font-size: 9px;
+  }
+
+  .txLedgerIn th,
+  .txLedgerIn td {
+    padding: 5px 3px;
+  }
+
+  .txLedgerIn .txRefCell .txCustName {
+    font-size: 11px;
+  }
+
+  .txLedgerIn .txRefCell .txInvoiceNo,
+  .txLedgerIn td .txInvoiceNo {
+    font-size: 9px;
+  }
+
+  .txLedgerIn td,
+  .txLedgerIn td strong {
+    font-size: 10px;
+    max-width: none;
+  }
+
+  .txLedgerIn td[style] {
+    font-size: 10px !important;
+  }
+
+  .txLedgerIn .txItem {
+    min-height: 30px;
+  }
+
+  .txLedgerIn .poItemTypeSelect {
+    font-size: 10px;
+    padding: 1px 2px;
+    width: 100%;
+    min-width: 66px;
+    max-width: 78px; /* sized to the cell, not to the longest option */
+  }
+
+  /* Date may wrap ("13 Nov / 2026") so the columns share the width better */
+  .txLedgerIn td:last-child {
+    white-space: normal !important;
+    min-width: 40px;
+  }
+
+  /* PO number wraps at its "-" or "." rather than mid-word where possible */
+  .txLedgerIn .txRefCell .txCustName {
+    overflow-wrap: break-word;
+    word-break: normal;
+    min-width: 64px;
+  }
+}
